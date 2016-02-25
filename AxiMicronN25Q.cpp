@@ -269,7 +269,7 @@ void AxiMicronN25Q::eraseBootProm ( ) {
 
    cout << "*******************************************************************" << endl;   
    cout << "Starting Erasing ..." << endl; 
-   while(address<=(promStartAddr_+promSize_)) {        
+   while(address<(promStartAddr_+promSize_)) {        
       /*
       // Print the status to screen
       cout << hex << "Erasing PROM from 0x" << address << " to 0x" << (address+ERASE_SIZE-1);
@@ -335,13 +335,16 @@ bool AxiMicronN25Q::writeBootProm ( ) {
    mem.endOfFile = false;      
    
    //read the entire mcs file
-   while(( !mem.endOfFile) && (cnt < promSize_) ) {
+   while(cnt < promSize_) {
    
       //read a line of the mcs file
       if (mcsReader.read(&mem)<0){
          cout << "mcsReader.close() = line read error" << endl;
          mcsReader.close();
          return false;
+      }
+      if ( mem.endOfFile ){
+         break;
       }
       
       if( (byteCnt==0) && (wordCnt==0) ) {
@@ -432,13 +435,16 @@ bool AxiMicronN25Q::bufferedWriteBootProm ( ) {
    mem.endOfFile = false;      
    
    //read the entire mcs file
-   while(( !mem.endOfFile) && (cnt < promSize_) ) {
+   while(cnt < promSize_) {
    
       //read a line of the mcs file
       if (mcsReader.read(&mem)<0){
          cout << "mcsReader.close() = line read error" << endl;
          mcsReader.close();
          return false;
+      }
+      if ( mem.endOfFile ){
+         break;
       }
       
       if( byteCnt==0 ) {
@@ -553,13 +559,16 @@ bool AxiMicronN25Q::verifyBootProm ( ) {
    mem.endOfFile = false;   
 
    //read the entire mcs file
-   while(( !mem.endOfFile) && (cnt < promSize_) ) {
+   while(cnt < promSize_) {
    
       //read a line of the mcs file
       if (mcsReader.read(&mem)<0){
          cout << "mcsReader.close() = line read error" << endl;
          mcsReader.close();
          return false;
+      }
+      if ( mem.endOfFile ){
+         break;
       }
       
       fileData = (uint8_t)(mem.data & 0xFF);
@@ -634,13 +643,16 @@ bool AxiMicronN25Q::bufferedVerifyBootProm ( ) {
    mem.endOfFile = false;   
 
    //read the entire mcs file
-   while(( !mem.endOfFile) && (cnt < promSize_) ) {
+   while(cnt < promSize_) {
    
       //read a line of the mcs file
       if (mcsReader.read(&mem)<0){
          cout << "mcsReader.close() = line read error" << endl;
          mcsReader.close();
          return false;
+      }
+      if ( mem.endOfFile ){
+         break;
       }
       
       // Latch the .MCS file data
