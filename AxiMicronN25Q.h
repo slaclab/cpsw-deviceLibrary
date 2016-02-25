@@ -65,40 +65,45 @@ typedef shared_ptr<IEEProm> EEProm;
 
 class IEEProm : public virtual IEntry {
    public:
-      virtual void setPromSize (uint32_t promSize);
+      virtual void setProgSize (uint32_t progSize)       = 0;
       
-      virtual uint32_t getPromSize (string pathToFile); 
       
-      virtual void setFilePath (string pathToFile);
+      virtual void setFilePath (string pathToFile)       = 0;
+	  virtual bool fileExist ( )                         = 0;      
       
-      virtual void setAddr32BitMode (bool addr32BitMode);
+      virtual void setAddr32BitMode (bool addr32BitMode) = 0;
       
-      virtual void setPromStatusReg(uint8_t value);  
+      virtual void setPromStatusReg(uint8_t value)       = 0;  
       
-      virtual uint8_t getPromStatusReg();    
+      virtual uint8_t getPromStatusReg()                 = 0;    
       
-      virtual uint8_t getManufacturerId();      
+      virtual uint8_t getManufacturerId()                = 0;      
       
-      virtual uint8_t getManufacturerType();        
+      virtual uint8_t getManufacturerType()              = 0;        
       
-      virtual uint8_t getManufacturerCapacity();        
+      virtual uint8_t getManufacturerCapacity()          = 0;        
+
+	  virtual unsigned getEraseBlockSize()               = 0;
       
       //! Erase the PROM
-      virtual void eraseProm (uint32_t startAddr, uint32_t endAddr);
+
+	  virtual void eraseProm ()                          = 0;
 
       //! Write the .mcs file to the PROM
-      virtual bool writeProm ( ); 
+      virtual bool writeProm ( )                         = 0; 
       
       //! Compare the .mcs file with the PROM
-      virtual bool verifyProm ( ); 
+      virtual bool verifyProm ( )                        = 0; 
       
       //! Print Reminder
-      virtual void rebootReminder ( bool pwrCycleReq );      
+      virtual void rebootReminder ( bool pwrCycleReq )   = 0;
    
       //! Block Read of PROM (independent of .MCS file)
-      virtual void readProm (uint32_t address, uint32_t *data);      
+      virtual void readProm (uint32_t address, uint32_t *data) = 0;      
    
       virtual ~IEEProm ( ) {};
+
+      static uint32_t getFileSize (string pathToFile);
 
       static EEProm create(Path p);
 };

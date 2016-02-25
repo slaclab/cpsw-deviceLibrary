@@ -125,13 +125,13 @@ public:
 	virtual uint32_t   read(McsReadData *arg) { return McsRead::read(arg);   }
 };
 
-
+// Implementation of the EEPROM user interface
 class CEEPromImpl : public IEEProm {
 private:
 	// Local Variables -- for supporting the public interface
 	string       filePath_;
-	uint32_t     promSize_;
-	uint32_t     promStartAddr_;
+	uint32_t     progSize_;
+	uint32_t     progStartAddr_;
 	IFileReader *reader_;
 
 protected:
@@ -139,16 +139,16 @@ protected:
 
 public:
 	CEEPromImpl()
-	: promSize_(0),
-	  promStartAddr_(0),
+	: progSize_(0),
+	  progStartAddr_(0),
 	  addr32BitMode_(false),
 	  reader_( new McsReadAdapt() )
 	{
 	}
 
 	CEEPromImpl(IFileReader *reader)
-	: promSize_(0),
-	  promStartAddr_(0),
+	: progSize_(0),
+	  progStartAddr_(0),
 	  addr32BitMode_(false),
 	  reader_( reader )
 	{
@@ -158,18 +158,22 @@ public:
 	{
 		delete reader_;
 	}
-	virtual void setPromSize (uint32_t promSize);
-	virtual uint32_t getPromSize (string pathToFile); 
+	virtual void     setProgSize (uint32_t promSize);
+	virtual uint32_t getFileSize (string pathToFile); 
 	virtual void setFilePath (string pathToFile);
 	virtual bool fileExist ( );      
 	virtual void setAddr32BitMode (bool addr32BitMode);
     virtual void eraseProm (uint32_t startAddr, uint32_t endAddr);
+
+	virtual void eraseProm();
+
 	// pure virtual methods to implemented for particular EEPROM
 	virtual void    setPromStatusReg(uint8_t value) = 0;
 	virtual uint8_t getPromStatusReg()              = 0;
 	virtual uint8_t getManufacturerId()             = 0;
 	virtual uint8_t getManufacturerType()           = 0;
 	virtual uint8_t getManufacturerCapacity()       = 0;
+	virtual unsigned getEraseBlockSize()            = 0;
 	virtual bool    writeProm ( ); 
 	virtual bool    verifyProm ( ); 
 	virtual void rebootReminder ( bool pwrCycleReq );      
@@ -223,6 +227,8 @@ class CMicronN25QEEProm : public CEEPromImpl {
 	virtual void resetFlash ( );
 	virtual void writeEnable ( );
 	virtual void writeDisable ( );
+
+	virtual unsigned getEraseBlockSize() { return ERASE_SIZE; }
       
     //! Reset the FLASH memory Command
 
@@ -251,24 +257,11 @@ class CMicronN25QEEProm : public CEEPromImpl {
 	virtual void getData ()   = 0;
 };
 
-#if 0
-:
-      Device(linkConfig, baseAddress, "CMicronN25QEEProm", index, parent)
-{
-   // Declare the registers
-   addRegisterLink(new RegisterLink("Test", baseAddress + 0x0*addrSize, Variable::Configuration));   
-   addr32BitReg_ = new Register("addr32BitMode",baseAddress + (0x01 * addrSize)); 
-   addrReg_      = new Register("ADDR",         baseAddress + (0x02 * addrSize)); 
-   cmdReg_       = new Register("CMD",          baseAddress + (0x03 * addrSize));
-   dataReg_      = new Register("DATA",         baseAddress + (0x80 * addrSize),64);
-}
-#endif
-
-void CEEPromImpl::setPromSize (uint32_t promSize) {
-   promSize_ = promSize;
+void CEEPromImpl::setProgSize (uint32_t progSize) {
+   progSize_ = progSize;
 }
 
-uint32_t CEEPromImpl::getPromSize (string pathToFile) {
+uint32_t CEEPromImpl::getFileSize (string pathToFile) {
    FileReader mcsReader(reader_);
    uint32_t retVar;
    mcsReader.open(pathToFile);
@@ -282,7 +275,7 @@ void CEEPromImpl::setFilePath (string pathToFile) {
    filePath_ = pathToFile;
    FileReader mcsReader(reader_);   
    mcsReader.open(filePath_);
-   promStartAddr_ = mcsReader.startAddr();
+   progStartAddr_ = mcsReader.startAddr();
    resetFlash();     
 }
 
@@ -368,6 +361,13 @@ void CEEPromImpl::rebootReminder ( bool pwrCycleReq ) {
    cout << "\n\n\n\n\n";
 }
 
+void CEEPromImpl::eraseProm() {
+uint32_t align_mask = ~(getEraseBlockSize() - 1);
+uint32_t start_addr = progStartAddr_ & align_mask; // down-align to block addr
+uint32_t end_addr   = (progStartAddr_ + progSize_ + getEraseBlockSize() - 1) & align_mask ; // up-align to block addr
+	eraseProm( start_addr, end_addr - start_addr );
+}
+
 //! Erase the PROM
 void CEEPromImpl::eraseProm (uint32_t startAddr, uint32_t eraseSize) {
 
@@ -376,11 +376,11 @@ void CEEPromImpl::eraseProm (uint32_t startAddr, uint32_t eraseSize) {
    double percentage;
    double skim = 5.0; 
 
-   if ( (startAddr % ERASE_SIZE) != 0 ) {
-      throw InvalidArgError("eraseProm: startAddr must be multiple of ERASE_SIZE");
+   if ( (startAddr % getEraseBlockSize()) != 0 ) {
+      throw InvalidArgError("eraseProm: startAddr must be multiple of erase block size");
    }
-   if ( (eraseSize % ERASE_SIZE) != 0 ) {
-      throw InvalidArgError("eraseProm: eraseSize must be multiple of ERASE_SIZE");
+   if ( (eraseSize % getEraseBlockSize()) != 0 ) {
+      throw InvalidArgError("eraseProm: eraseSize must be multiple of erase block size");
    }
 
    cout << "*******************************************************************" << endl;   
@@ -388,7 +388,7 @@ void CEEPromImpl::eraseProm (uint32_t startAddr, uint32_t eraseSize) {
    while(address < (startAddr+eraseSize)) {        
       /*
       // Print the status to screen
-      cout << hex << "Erasing PROM from 0x" << address << " to 0x" << (address+ERASE_SIZE-1);
+      cout << hex << "Erasing PROM from 0x" << address << " to 0x" << (address+getEraseBlockSize()-1);
       cout << setprecision(3) << " ( " << ((double(address))/size)*100 << " percent done )" << endl;      
       */
       
@@ -396,7 +396,7 @@ void CEEPromImpl::eraseProm (uint32_t startAddr, uint32_t eraseSize) {
       eraseCommand(address);
       
       //increment the address pointer
-      address += ERASE_SIZE;
+      address += getEraseBlockSize();
       
       percentage = (((double)address-startAddr)/size)*100;
       if( (percentage>=skim) && (percentage<100.0) ) {
@@ -415,7 +415,7 @@ bool CEEPromImpl::writeProm ( ) {
    McsReadData mem;
    
    uint32_t fileData;
-   double size = double(promSize_);
+   double size = double(progSize_);
    double percentage;
    double skim = 1.0;    
    uint32_t byteCnt = 0;    
@@ -429,8 +429,8 @@ bool CEEPromImpl::writeProm ( ) {
       return false;
    }  
    
-   if(promSize_ == 0x0){
-      cout << "Invalid promSize_: 0x0" << endl;
+   if(progSize_ == 0x0){
+      cout << "Invalid progSize_: 0x0" << endl;
       return false;      
    }
    
@@ -438,7 +438,7 @@ bool CEEPromImpl::writeProm ( ) {
    mem.endOfFile = false;      
    
    //read the entire mcs file
-   while(cnt < promSize_) {
+   while(cnt < progSize_) {
    
       //read a line of the mcs file
       if (mcsReader.read(&mem)<0){
@@ -470,7 +470,7 @@ bool CEEPromImpl::writeProm ( ) {
          }                 
       }
       
-      percentage = (((double)(mem.address-promStartAddr_))/size)*100;
+      percentage = (((double)(mem.address-progStartAddr_))/size)*100;
       if( (percentage>=skim) && (percentage<100.0) ) {
          skim += 5.0;
          cout << "Writing the PROM: " << dec << round(percentage)-1 << " percent done" << endl;
@@ -511,7 +511,7 @@ bool CEEPromImpl::verifyProm ( ) {
    McsReadData mem;
    
    uint8_t promData,fileData;
-   double size = double(promSize_);
+   double size = double(progSize_);
    double percentage;
    double skim = 5.0; 
    uint32_t byteCnt = 0;    
@@ -524,8 +524,8 @@ bool CEEPromImpl::verifyProm ( ) {
       return(1);
    }
 
-   if(promSize_ == 0x0){
-      cout << "Invalid promSize_: 0x0" << endl;
+   if(progSize_ == 0x0){
+      cout << "Invalid progSize_: 0x0" << endl;
       return false;      
    }   
    
@@ -533,7 +533,7 @@ bool CEEPromImpl::verifyProm ( ) {
    mem.endOfFile = false;   
 
    //read the entire mcs file
-   while(cnt < promSize_) {
+   while(cnt < progSize_) {
    
       //read a line of the mcs file
       if (mcsReader.read(&mem)<0){
@@ -568,7 +568,7 @@ bool CEEPromImpl::verifyProm ( ) {
          }                 
       }      
       
-      percentage = (((double)(mem.address-promStartAddr_))/size)*100;
+      percentage = (((double)(mem.address-progStartAddr_))/size)*100;
       if( (percentage>=skim) && (percentage<100.0) ) {
          skim += 5.0;
          cout << "Verifying the PROM: " << dec << uint16_t(percentage) << " percent done" << endl;
@@ -686,7 +686,10 @@ uint32_t CMicronN25QEEProm::statusReg ( ) {
    return getCmd();
 }
 
-// Micron N25Q driven by slac axi firmware
+// Micron N25Q driven by slac axi firmware.
+// This class implements SPI operations via access to firmware
+// registers. The registers are manipulated via CPSW.
+
 class CAxiMicronN25QEEProm:  public CMicronN25QEEProm, public IEntryAdapt {
 protected:
 	ScalVal amodeReg_;
@@ -774,6 +777,9 @@ EEProm rval;
   // check if the object referred to by 'p' actually supports
   // the desired interface:
   rval = IEntryAdapt::check_interface<AxiMicronN25QAdapt, AxiMicronN25QImpl>( p );
+
+  // if drivers for other EEPROMs and/or EEPROM interfaces are ever added
+  // they should be registered with this 'create' function.
 
   return rval;
 }
