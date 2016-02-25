@@ -32,7 +32,7 @@
 #include <math.h>
 #include <time.h>
 
-#include "AxiMicronN25Q_cpsw.h"
+#include "AxiMicronN25Q.h"
 #include <cpsw_entry_adapt.h>
 #include "McsRead.h"
 
@@ -163,7 +163,7 @@ public:
 	virtual void setFilePath (string pathToFile);
 	virtual bool fileExist ( );      
 	virtual void setAddr32BitMode (bool addr32BitMode);
-	virtual void eraseProm ( );    
+    virtual void eraseProm (uint32_t startAddr, uint32_t endAddr);
 	// pure virtual methods to implemented for particular EEPROM
 	virtual void    setPromStatusReg(uint8_t value) = 0;
 	virtual uint8_t getPromStatusReg()              = 0;
