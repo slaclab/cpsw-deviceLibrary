@@ -46,6 +46,7 @@ public:
 //-----------------------------------------------------------------------------
 // Modification history :
 // 03/19/2014: created
+// 02/08/2016: cpsw port
 //-----------------------------------------------------------------------------
 
 #ifndef __AXI_MICRON_N25Q_H__
@@ -54,131 +55,98 @@ public:
 #include <stdint.h>
 #include <string.h>
 
-#include <Device.h>
-#include <Register.h>
-#include <MultDest.h>
-#include <CommLink.h>
+#include <cpsw_api_user.h>
+#include <cpsw_api_builder.h>
 
-//! Class to contain generic register data.
-class AxiMicronN25Q : public Device {
+// public user interface
+
+class IEEProm;
+typedef shared_ptr<IEEProm> EEProm;
+
+class IEEProm : public virtual IEntry {
    public:
-
-      //! Constructor
-      AxiMicronN25Q (uint32_t linkConfig, uint32_t baseAddress, uint32_t index, Device *parent, uint32_t addrSize=1);
-
-      //! Deconstructor
-      ~AxiMicronN25Q ( );
-
-      void setPromSize (uint32_t promSize);
+      virtual void setPromSize (uint32_t promSize);
       
-      uint32_t getPromSize (string pathToFile); 
+      virtual uint32_t getPromSize (string pathToFile); 
       
-      void setFilePath (string pathToFile);
+      virtual void setFilePath (string pathToFile);
       
-      void setAddr32BitMode (bool addr32BitMode);
+      virtual void setAddr32BitMode (bool addr32BitMode);
       
-      void setPromStatusReg(uint8_t value);  
+      virtual void setPromStatusReg(uint8_t value);  
       
-      uint8_t getPromStatusReg();    
+      virtual uint8_t getPromStatusReg();    
       
-      uint8_t getManufacturerId();      
+      virtual uint8_t getManufacturerId();      
       
-      uint8_t getManufacturerType();        
+      virtual uint8_t getManufacturerType();        
       
-      uint8_t getManufacturerCapacity();        
-      
-      void setLane (uint32_t lane);   
-      
-      void setVc (uint32_t vc);  
-
-      void setTDest (uint32_t tDest);          
-      
-      //! Check if file exist
-      bool fileExist ( );      
+      virtual uint8_t getManufacturerCapacity();        
       
       //! Erase the PROM
-      void eraseBootProm ( );    
+      virtual void eraseProm (uint32_t startAddr, uint32_t endAddr);
 
       //! Write the .mcs file to the PROM
-      bool writeBootProm ( ); 
-      
-      //! Write the .mcs file to the PROM
-      bool bufferedWriteBootProm ( ); 
+      virtual bool writeProm ( ); 
       
       //! Compare the .mcs file with the PROM
-      bool verifyBootProm ( ); 
+      virtual bool verifyProm ( ); 
       
-      //! Compare the .mcs file with the PROM
-      bool bufferedVerifyBootProm ();           
-
       //! Print Reminder
-      void rebootReminder ( bool pwrCycleReq );      
+      virtual void rebootReminder ( bool pwrCycleReq );      
    
       //! Block Read of PROM (independent of .MCS file)
-      void readBootProm (uint32_t address, uint32_t *data);      
+      virtual void readProm (uint32_t address, uint32_t *data);      
    
-   private:
-      // Local Variables
-      string   filePath_;
-      uint32_t promSize_;
-      uint32_t promStartAddr_;
-      bool     addr32BitMode_;
-      
-      Register *addr32BitReg_;
-      Register *addrReg_;
-      Register *cmdReg_;
-      Register *dataReg_;
-      uint32_t data_[64];
-      
-      uint32_t lane_;
-      uint32_t vc_;
-      
-      //! Enter 4-BYTE ADDRESS MODE Command
-      void enter32BitMode( );     
+      virtual ~IEEProm ( ) {};
 
-      //! Exit 4-BYTE ADDRESS MODE Command
-      void exit32BitMode( );      
-
-      //! Erase Command
-      void eraseCommand(uint32_t address);
-      
-      //! Write Command
-      void writeCommand(uint32_t address); 
-      
-      //! Write Command
-      bool bufferedWriteCommand(uint32_t baseAddr, uint8_t *data); 
-
-      //! Read Command
-      void readCommand(uint32_t address);       
-      
-      //! Buffered Read Command
-      uint32_t bufferedReadCommand(uint32_t baseAddr, uint8_t *data);      
-      
-      //! Reset the FLASH memory Command
-      void resetFlash ( );
-
-      //! Enable Write commands
-      void writeEnable ( );
-
-      //! Disable Write commands
-      void writeDisable ( );
-
-      //! Wait for the FLASH memory to not be busy
-      void waitForFlashReady ( );
-
-      //! Pull the status register
-      uint32_t statusReg ( );
-      
-      //! Set the address register
-      void setAddr (uint32_t value);      
-
-      //! Set the command register
-      void setCmd (uint32_t value);
-      
-      //! Send the data register
-      void setData ();
-
-      //! Get the data register
-      void getData ();
+      static EEProm create(Path p);
 };
+
+// builder interface for axi micron N25Q eeprom
+class IAxiMicronN25Q;
+typedef shared_ptr<IAxiMicronN25Q> AxiMicronN25Q;
+
+class IAxiMicronN25Q : public virtual IEntry {
+public:
+
+	virtual ~IAxiMicronN25Q() {}
+
+	static AxiMicronN25Q create(const char *name);
+};
+
+#include <cpsw_mmio_dev.h>
+
+class CAxiMicronN25QImpl : public IAxiMicronN25Q, public CMMIODevImpl {
+public:
+	CAxiMicronN25QImpl(Key &k, const char *name)
+	: CMMIODevImpl(k, name, 0xC0 << 2, LE)
+	{
+	}
+protected:
+	CAxiMicronN25QImpl(CAxiMicronN25QImpl &orig, Key &k)
+	: CMMIODevImpl(orig, k)
+	{
+	}
+
+	virtual CAxiMicronN25QImpl *clone(Key &k) { return new CAxiMicronN25QImpl( *this, k ); }
+};
+
+typedef shared_ptr<CAxiMicronN25QImpl> AxiMicronN25QImpl;
+
+AxiMicronN25Q IAxiMicronN25Q::create(const char *name)
+{
+AxiMicronN25QImpl v = CShObj::create<AxiMicronN25QImpl>(name);
+Field f;
+	f = IIntField::create("addr32BitMode", 32);
+	v->addAtAddress( f, 0x04 );
+	f = IIntField::create("ADDR",          32);
+	v->addAtAddress( f, 0x08 );
+	f = IIntField::create("CMD",           32);
+	v->addAtAddress( f, 0x0C );
+	f = IIntField::create("DATA",          32);
+	v->addAtAddress( f, 0x80, 64 );
+	return v;
+}
+
 #endif

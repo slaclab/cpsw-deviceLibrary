@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// File          : AxiMicronN25Q.cpp
+// File          : CMicronN25QEEProm.cpp
 // Author        : Larry Ruckman  <ruckman@slac.stanford.edu>
 // Created       : 03/19/2014
 // Project       :  
@@ -32,12 +32,8 @@
 #include <math.h>
 #include <time.h>
 
-#include <RegisterLink.h>
-#include <Register.h>
-#include <MultDest.h>
-#include <Data.h>
-#include <System.h>
-#include "AxiMicronN25Q.h"
+#include "AxiMicronN25Q_cpsw.h"
+#include <cpsw_entry_adapt.h>
 #include "McsRead.h"
 
 using namespace std;
@@ -91,160 +87,273 @@ using namespace std;
 #define WRITE_MASK  0x80000000 
 #define VERIFY_MASK 0x40000000 
 
-// Constructor
-AxiMicronN25Q::AxiMicronN25Q (uint32_t linkConfig, uint32_t baseAddress, uint32_t index, Device *parent, uint32_t addrSize) :
-      Device(linkConfig, baseAddress, "AxiMicronN25Q", index, parent) {
+class IFileReader;
+class FileReader;
+
+class IFileReader {
+public:
+	virtual bool       open(string)       = 0;
+	virtual void       close()            = 0;
+	virtual uint32_t   startAddr()        = 0;
+	virtual uint32_t   addrSize()         = 0;
+	virtual uint32_t   read(McsReadData*) = 0;
+};
+
+// for exception safety
+class FileReader : public IFileReader {
+	IFileReader *h;
+public:
+	virtual bool       open(string path)      { return h->open(path);  }
+	virtual void       close()                { h->close();            }
+	virtual uint32_t   startAddr()            { return h->startAddr(); }
+	virtual uint32_t   addrSize()             { return h->addrSize();  }
+	virtual uint32_t   read(McsReadData *arg) { return h->read(arg);   }
+
+	virtual ~FileReader() 
+	{
+		h->close();
+	}
+	FileReader(IFileReader *i):h(i) {}
+};
+
+class McsReadAdapt : public McsRead, public IFileReader {
+public:
+	virtual bool       open(string path)      { return McsRead::open(path);  }
+	virtual void       close()                { McsRead::close();            }
+	virtual uint32_t   startAddr()            { return McsRead::startAddr(); }
+	virtual uint32_t   addrSize()             { return McsRead::addrSize();  }
+	virtual uint32_t   read(McsReadData *arg) { return McsRead::read(arg);   }
+};
+
+
+class CEEPromImpl : public IEEProm {
+private:
+	// Local Variables -- for supporting the public interface
+	string       filePath_;
+	uint32_t     promSize_;
+	uint32_t     promStartAddr_;
+	IFileReader *reader_;
+
+protected:
+	bool     addr32BitMode_;
+
+public:
+	CEEPromImpl()
+	: promSize_(0),
+	  promStartAddr_(0),
+	  addr32BitMode_(false),
+	  reader_( new McsReadAdapt() )
+	{
+	}
+
+	CEEPromImpl(IFileReader *reader)
+	: promSize_(0),
+	  promStartAddr_(0),
+	  addr32BitMode_(false),
+	  reader_( reader )
+	{
+	}
+
+	virtual ~CEEPromImpl()
+	{
+		delete reader_;
+	}
+	virtual void setPromSize (uint32_t promSize);
+	virtual uint32_t getPromSize (string pathToFile); 
+	virtual void setFilePath (string pathToFile);
+	virtual bool fileExist ( );      
+	virtual void setAddr32BitMode (bool addr32BitMode);
+	virtual void eraseProm ( );    
+	// pure virtual methods to implemented for particular EEPROM
+	virtual void    setPromStatusReg(uint8_t value) = 0;
+	virtual uint8_t getPromStatusReg()              = 0;
+	virtual uint8_t getManufacturerId()             = 0;
+	virtual uint8_t getManufacturerType()           = 0;
+	virtual uint8_t getManufacturerCapacity()       = 0;
+	virtual bool    writeProm ( ); 
+	virtual bool    verifyProm ( ); 
+	virtual void rebootReminder ( bool pwrCycleReq );      
+	virtual void readProm (uint32_t address, uint32_t *data);      
+
+// variable and method members that are visible only to the implementation
+protected:
+
+    uint32_t data_[64];
+
+    //! Enter 4-BYTE ADDRESS MODE Command
+    virtual void enter32BitMode()               = 0;
+
+    //! Exit 4-BYTE ADDRESS MODE Command
+	virtual void exit32BitMode()                = 0;
+
+	virtual void eraseCommand(uint32_t address) = 0;
+	virtual void writeCommand(uint32_t address) = 0; 
+	virtual void readCommand(uint32_t address)  = 0;
+	virtual void resetFlash ( )                 = 0;
+	virtual void writeEnable ( )                = 0;
+	virtual void writeDisable ( )               = 0;
+};
+
+//! Class to support SPI EEPROM regardless of a particular driver.
+//  Such a driver must implement the low-level functions left as
+//  pure-virtual by this class.
+class CMicronN25QEEProm : public CEEPromImpl {
+   public:
+
+	//! Destructor
+	virtual ~CMicronN25QEEProm ( ) {};
+
+	virtual void    setPromStatusReg(uint8_t value);
+	virtual uint8_t getPromStatusReg();
+	virtual uint8_t getManufacturerId();
+	virtual uint8_t getManufacturerType();
+	virtual uint8_t getManufacturerCapacity();
+
+   protected:
+	//! Enter 4-BYTE ADDRESS MODE Command
+	virtual void enter32BitMode();
+
+	//! Exit 4-BYTE ADDRESS MODE Command
+	virtual void exit32BitMode();
+
+
+	virtual void eraseCommand(uint32_t address);
+	virtual void writeCommand(uint32_t address);
+	virtual void readCommand(uint32_t address);
+	virtual void resetFlash ( );
+	virtual void writeEnable ( );
+	virtual void writeDisable ( );
+      
+    //! Reset the FLASH memory Command
+
+    //! Wait for the FLASH memory to not be busy
+	virtual void waitForFlashReady ( );
+
+    //! Pull the status register
+	virtual uint32_t statusReg ( );
+
+
+	virtual void set32BitModeReg()        = 0;
+      
+    //! Set the address register
+    virtual void setAddr (uint32_t value) = 0;
+
+
+    //! Set the command register
+	virtual void setCmd (uint32_t value, bool writeEnable = true) = 0;
+
+	virtual uint32_t getCmd() = 0;
+      
+    //! Send the data register
+	virtual void setData ()   = 0;
+
+    //! Get the data register
+	virtual void getData ()   = 0;
+};
+
+#if 0
+:
+      Device(linkConfig, baseAddress, "CMicronN25QEEProm", index, parent)
+{
    // Declare the registers
    addRegisterLink(new RegisterLink("Test", baseAddress + 0x0*addrSize, Variable::Configuration));   
    addr32BitReg_ = new Register("addr32BitMode",baseAddress + (0x01 * addrSize)); 
    addrReg_      = new Register("ADDR",         baseAddress + (0x02 * addrSize)); 
    cmdReg_       = new Register("CMD",          baseAddress + (0x03 * addrSize));
    dataReg_      = new Register("DATA",         baseAddress + (0x80 * addrSize),64);
-      
-   // Default PROM size = 0x0 (must be set using setPromSize() )
-   promSize_      = 0x0;
-   
-   // Default PROM size = 0x0 (must be set using setFilePath() )
-   promStartAddr_ = 0x0;
-   
-   // Default file path = NULL (must be set using setFilePath() )
-   filePath_ = "";
-
-   // Default to 24-bit address mode
-   addr32BitMode_ = false;
-   
-   // Default for optional streaming lane_ and vc_ pointers
-   lane_ = 0xFF;
-   vc_   = 0xFF;
 }
+#endif
 
-// Deconstructor
-AxiMicronN25Q::~AxiMicronN25Q ( ) { 
-   delete addr32BitReg_;
-   delete addrReg_;
-   delete cmdReg_;
-   delete dataReg_;
-}
-
-void AxiMicronN25Q::setPromSize (uint32_t promSize) {
+void CEEPromImpl::setPromSize (uint32_t promSize) {
    promSize_ = promSize;
 }
 
-uint32_t AxiMicronN25Q::getPromSize (string pathToFile) {
-   McsRead mcsReader;
+uint32_t CEEPromImpl::getPromSize (string pathToFile) {
+   FileReader mcsReader(reader_);
    uint32_t retVar;
    mcsReader.open(pathToFile);
    printf("Calculating PROM file (.mcs) Memory Address size ...");    
    retVar = mcsReader.addrSize();
    printf("PROM Size = 0x%08x\n", retVar); 
-   mcsReader.close();
    return retVar; 
 }
 
-void AxiMicronN25Q::setFilePath (string pathToFile) {
+void CEEPromImpl::setFilePath (string pathToFile) {
    filePath_ = pathToFile;
-   McsRead mcsReader;   
+   FileReader mcsReader(reader_);   
    mcsReader.open(filePath_);
    promStartAddr_ = mcsReader.startAddr();
-   mcsReader.close();   
    resetFlash();     
 }
 
 //! Set the address mode
-void AxiMicronN25Q::setAddr32BitMode (bool addr32BitMode) {
+void CEEPromImpl::setAddr32BitMode (bool addr32BitMode) {
    addr32BitMode_ = addr32BitMode;
    if(addr32BitMode_){
       enter32BitMode();
    } else {
       exit32BitMode();
    }
-   REGISTER_LOCK
-   addr32BitReg_->set((uint32_t)addr32BitMode_);
-   writeRegister(addr32BitReg_, true);    
-   REGISTER_UNLOCK
 }
 
 //! Enter 4-BYTE ADDRESS MODE Command
-void AxiMicronN25Q::enter32BitMode( ) {   
+void CMicronN25QEEProm::enter32BitMode( ) {   
    // Send the enter command
    setCmd(WRITE_MASK|ADDR_ENTER_CMD);     
+   set32BitModeReg();
 }
 
 //! Exit 4-BYTE ADDRESS MODE Command
-void AxiMicronN25Q::exit32BitMode( ) {   
+void CMicronN25QEEProm::exit32BitMode( ) {   
    // Send the exit command
    setCmd(WRITE_MASK|ADDR_EXIT_CMD);      
+   set32BitModeReg();
 }
 
 //! Set the non-volatile status register 
-void AxiMicronN25Q::setPromStatusReg(uint8_t value) {   
+void CMicronN25QEEProm::setPromStatusReg(uint8_t value) {   
    if(addr32BitMode_){
       setAddr(((uint32_t)value)<<24); 
       setCmd(WRITE_MASK|STATUS_REG_WR_CMD|0x1);     
    } else {
       setAddr(((uint32_t)value)<<16); 
       setCmd(WRITE_MASK|STATUS_REG_WR_CMD|0x1);          
-   }   
+   }
    waitForFlashReady();    
 }
 
-uint8_t AxiMicronN25Q::getPromStatusReg(){  
+uint8_t CMicronN25QEEProm::getPromStatusReg(){  
    waitForFlashReady();
    setCmd(READ_MASK|STATUS_REG_RD_CMD|0x1); 
-   REGISTER_LOCK
-   readRegister(cmdReg_);
-   REGISTER_UNLOCK
-   return (uint8_t)(cmdReg_->get()&0xFF);   
+   return (uint8_t)(getCmd() & 0xFF);
 }
 
-uint8_t AxiMicronN25Q::getManufacturerId(){  
+uint8_t CMicronN25QEEProm::getManufacturerId(){  
    waitForFlashReady();
    setCmd(READ_MASK|DEV_ID_RD_CMD|0x1); 
-   REGISTER_LOCK
-   readRegister(cmdReg_);
-   REGISTER_UNLOCK
-   return (uint8_t)(cmdReg_->get()&0xFF);       
+   return (uint8_t)(getCmd()&0xFF);       
 }
 
-uint8_t AxiMicronN25Q::getManufacturerType(){  
+uint8_t CMicronN25QEEProm::getManufacturerType(){  
    waitForFlashReady();
    setCmd(READ_MASK|DEV_ID_RD_CMD|0x2); 
-   REGISTER_LOCK
-   readRegister(cmdReg_);
-   REGISTER_UNLOCK
-   return (uint8_t)(cmdReg_->get()&0xFF);      
+   return (uint8_t)(getCmd()&0xFF);      
 }        
 
-uint8_t AxiMicronN25Q::getManufacturerCapacity(){  
+uint8_t CMicronN25QEEProm::getManufacturerCapacity(){  
    waitForFlashReady();
    setCmd(READ_MASK|DEV_ID_RD_CMD|0x3); 
-   REGISTER_LOCK
-   readRegister(cmdReg_);
-   REGISTER_UNLOCK
-   return (uint8_t)(cmdReg_->get()&0xFF);      
+   return (uint8_t)(getCmd()&0xFF);      
 }    
 
-void AxiMicronN25Q::setLane (uint32_t lane) {
-   lane_ = lane;
-}
-
-void AxiMicronN25Q::setVc (uint32_t vc) {
-   vc_ = vc;
-}
-
-void AxiMicronN25Q::setTDest (uint32_t tDest) {
-   lane_ = (tDest >> 4)&0xF;
-   vc_   = (tDest >> 0)&0xF;
-}
-
 //! Check if file exist (true=exists)
-bool AxiMicronN25Q::fileExist ( ) {
+bool CEEPromImpl::fileExist ( ) {
   ifstream ifile(filePath_.c_str());
   return ifile;
 }
 
 //! Print Power Cycle Reminder
-void AxiMicronN25Q::rebootReminder ( bool pwrCycleReq ) {
+void CEEPromImpl::rebootReminder ( bool pwrCycleReq ) {
    cout << "\n\n\n\n\n";
    cout << "***************************************" << endl;
    cout << "***************************************" << endl;
@@ -260,16 +369,23 @@ void AxiMicronN25Q::rebootReminder ( bool pwrCycleReq ) {
 }
 
 //! Erase the PROM
-void AxiMicronN25Q::eraseBootProm ( ) {
+void CEEPromImpl::eraseProm (uint32_t startAddr, uint32_t eraseSize) {
 
-   uint32_t address = promStartAddr_;
-   double size = double(promSize_);
+   uint32_t address = startAddr;
+   double size = double(eraseSize);
    double percentage;
    double skim = 5.0; 
 
+   if ( (startAddr % ERASE_SIZE) != 0 ) {
+      throw InvalidArgError("eraseProm: startAddr must be multiple of ERASE_SIZE");
+   }
+   if ( (eraseSize % ERASE_SIZE) != 0 ) {
+      throw InvalidArgError("eraseProm: eraseSize must be multiple of ERASE_SIZE");
+   }
+
    cout << "*******************************************************************" << endl;   
    cout << "Starting Erasing ..." << endl; 
-   while(address<(promStartAddr_+promSize_)) {        
+   while(address < (startAddr+eraseSize)) {        
       /*
       // Print the status to screen
       cout << hex << "Erasing PROM from 0x" << address << " to 0x" << (address+ERASE_SIZE-1);
@@ -282,7 +398,7 @@ void AxiMicronN25Q::eraseBootProm ( ) {
       //increment the address pointer
       address += ERASE_SIZE;
       
-      percentage = (((double)address-promStartAddr_)/size)*100;
+      percentage = (((double)address-startAddr)/size)*100;
       if( (percentage>=skim) && (percentage<100.0) ) {
          skim += 5.0;
          cout << "Erasing the PROM: " << floor(percentage) << " percent done" << endl;
@@ -291,23 +407,11 @@ void AxiMicronN25Q::eraseBootProm ( ) {
    cout << "Erasing completed" << endl;
 }
 
-//! Erase Command
-void AxiMicronN25Q::eraseCommand(uint32_t address) {    
-   // Set the address
-   setAddr(address); 
-   // Send the erase command      
-   if(addr32BitMode_){   
-      setCmd(WRITE_MASK|ERASE_CMD|0x4);     
-   }else{
-      setCmd(WRITE_MASK|ERASE_CMD|0x3);  
-   }           
-}
-
 //! Write the .mcs file to the PROM
-bool AxiMicronN25Q::writeBootProm ( ) {
+bool CEEPromImpl::writeProm ( ) {
    cout << "*******************************************************************" << endl;
    cout << "Starting Writing ..." << endl; 
-   McsRead mcsReader;
+   FileReader mcsReader(reader_);
    McsReadData mem;
    
    uint32_t fileData;
@@ -321,8 +425,7 @@ bool AxiMicronN25Q::writeBootProm ( ) {
 
    //check for valid file path
    if ( !mcsReader.open(filePath_) ) {
-      mcsReader.close();
-      cout << "mcsReader.close() = file path error" << endl;
+      cout << "mcsReader.open() = file path error" << endl;
       return false;
    }  
    
@@ -339,8 +442,7 @@ bool AxiMicronN25Q::writeBootProm ( ) {
    
       //read a line of the mcs file
       if (mcsReader.read(&mem)<0){
-         cout << "mcsReader.close() = line read error" << endl;
-         mcsReader.close();
+         cout << "mcsReader.read() = line read error" << endl;
          return false;
       }
       if ( mem.endOfFile ){
@@ -364,7 +466,6 @@ bool AxiMicronN25Q::writeBootProm ( ) {
          wordCnt++;
          if(wordCnt==64){
             wordCnt = 0;
-            setData();
             writeCommand(baseAddr);
          }                 
       }
@@ -392,147 +493,21 @@ bool AxiMicronN25Q::writeBootProm ( ) {
             wordCnt++;            
             if(wordCnt==64){
                wordCnt = 0;
-               setData();
                writeCommand(baseAddr);
             }                 
          }         
       }
    }
 
-   mcsReader.close();   
    cout << "Writing completed" << endl;   
    return true;
-}
-
-//! Write the .mcs file to the PROM
-bool AxiMicronN25Q::bufferedWriteBootProm ( ) {
-   cout << "*******************************************************************" << endl;
-   cout << "Starting Writing ..." << endl; 
-   McsRead mcsReader;
-   McsReadData mem;
-   
-   uint32_t baseAddr;  
-   uint32_t byteCnt     = 0;    
-   uint8_t  fileData[256];
-   double   size = double(promSize_);
-   double   percentage;
-   double   skim = 1.0;  
-   uint32_t cnt     = 0;     
-   
-   //check for valid file path
-   if ( !mcsReader.open(filePath_) ) {
-      mcsReader.close();
-      cout << "mcsReader.close() = file path error" << endl;
-      return false;
-   }  
-   
-   if(promSize_ == 0x0){
-      cout << "Invalid promSize_: 0x0" << endl;
-      return false;      
-   }
-   
-   //reset the flags
-   mem.endOfFile = false;      
-   
-   //read the entire mcs file
-   while(cnt < promSize_) {
-   
-      //read a line of the mcs file
-      if (mcsReader.read(&mem)<0){
-         cout << "mcsReader.close() = line read error" << endl;
-         mcsReader.close();
-         return false;
-      }
-      if ( mem.endOfFile ){
-         break;
-      }
-      
-      if( byteCnt==0 ) {
-         baseAddr = mem.address;
-      }
-      
-      fileData[byteCnt] = (uint8_t)(mem.data & 0xFF);
-
-      cnt++;
-      byteCnt++;
-      if(byteCnt==256){
-         byteCnt = 0;
-         bufferedWriteCommand(baseAddr,fileData);              
-      }
-      
-      percentage = (((double)(mem.address-promStartAddr_))/size)*100;
-      if( (percentage>=skim) && (percentage<100.0) ) {
-         skim += 5.0;
-         cout << "Writing the PROM: " << dec << round(percentage)-1 << " percent done" << endl;
-      }       
-   }
-   
-   // Check for the end of the buffer
-   if( byteCnt!=0 ){
-      while( byteCnt!=0 ){
-         // Pad with ones
-         fileData[byteCnt] = 0xFF;       
-         byteCnt++;
-         if(byteCnt==256){
-            byteCnt = 0;
-            bufferedWriteCommand(baseAddr,fileData);              
-         }       
-      }
-   }
-
-   mcsReader.close();   
-   cout << "Writing completed" << endl;   
-   return true;
-}
-
-//! Write Command
-void AxiMicronN25Q::writeCommand(uint32_t address) {   
-   // Set the address
-   setAddr(address); 
-   // Send the write command      
-   if(addr32BitMode_){   
-      setCmd(WRITE_MASK|WRITE_4BYTE_CMD|0x104);     
-   }else{
-      setCmd(WRITE_MASK|WRITE_3BYTE_CMD|0x103);  
-   }    
-}
-//! Streaming Transmit Command
-bool AxiMicronN25Q::bufferedWriteCommand(uint32_t baseAddr, uint8_t *data) {
-   uint32_t i;
-   uint32_t buffer[257];
-   uint32_t linkConfig  = ((lane_&0xF) << 28) | ((vc_&0xF) << 24) | (linkConfig_&0xFF);
-   uint32_t address     = ((0x1<<lane_) << 4)  | ((0x1<<vc_) << 0);
-   
-   // Check if lane is defined
-   if(lane_==0xFF){
-      cout << "AxiMicronP30.bufferedProgramCommand() = lane_ not defined " << endl;
-      return(1);// ERROR    
-   }
-
-   // Check if vc is defined
-   if(vc_==0xFF){
-      cout << "AxiMicronP30.bufferedProgramCommand() = vc_ not defined " << endl;
-      return(1);// ERROR    
-   }
-   
-   // Load the based Address
-   buffer[0] = baseAddr;
-
-   // Load the data
-   for(i=0;i<256;i++){
-      buffer[i+1] = (uint32_t)data[i];
-   }
-   
-   // Send the data
-   system_->commLink()->queueDataTx(linkConfig,address,buffer,257);   
-   return(0);
 }
 
 //! Compare the .mcs file with the PROM (true=matches)
-bool AxiMicronN25Q::verifyBootProm ( ) {
+bool CEEPromImpl::verifyProm ( ) {
    cout << "*******************************************************************" << endl;
    cout << "Starting Verification ..." << endl; 
-   McsRead mcsReader;
+   FileReader  mcsReader(reader_);
    McsReadData mem;
    
    uint8_t promData,fileData;
@@ -545,8 +520,7 @@ bool AxiMicronN25Q::verifyBootProm ( ) {
 
    //check for valid file path
    if ( !mcsReader.open(filePath_) ) {
-      mcsReader.close();
-      cout << "mcsReader.close() = file path error" << endl;
+      cout << "mcsReader.open() = file path error" << endl;
       return(1);
    }
 
@@ -563,8 +537,7 @@ bool AxiMicronN25Q::verifyBootProm ( ) {
    
       //read a line of the mcs file
       if (mcsReader.read(&mem)<0){
-         cout << "mcsReader.close() = line read error" << endl;
-         mcsReader.close();
+         cout << "mcsReader.read() = line read error" << endl;
          return false;
       }
       if ( mem.endOfFile ){
@@ -574,17 +547,15 @@ bool AxiMicronN25Q::verifyBootProm ( ) {
       fileData = (uint8_t)(mem.data & 0xFF);
       if( (byteCnt==0) && (wordCnt==0) ){ 
          readCommand(mem.address);
-         getData();
       }
       promData = (uint8_t)( (data_[wordCnt] >> 8*(3-byteCnt)) & 0xFF);
       cnt++;
       if(fileData != promData) {
-         cout << "verifyBootProm error = ";
+         cout << "verifyProm error = ";
          cout << "invalid read back" <<  endl;
          cout << hex << "\taddress: 0x"  << mem.address << endl;
          cout << hex << "\tfileData: 0x" << (uint32_t)fileData << endl;
          cout << hex << "\tpromData: 0x" << (uint32_t)promData << endl;
-         mcsReader.close();
          return false;
       }      
       
@@ -604,101 +575,48 @@ bool AxiMicronN25Q::verifyBootProm ( ) {
       }       
    }
    
-   mcsReader.close();  
    cout << "Verification completed" << endl;
    cout << "*******************************************************************" << endl;   
    return true;
 }
 
-//! Compare the .mcs file with the PROM (true=matches)
-bool AxiMicronN25Q::bufferedVerifyBootProm ( ) {
-   cout << "*******************************************************************" << endl;
-   cout << "Starting Verification ..." << endl; 
-   McsRead mcsReader;
-   McsReadData mem;
-   
-   uint32_t byteCnt = 0;    
-   uint8_t  fileData;
-   uint8_t  promData[256];  
-   uint32_t retAddr;  
-   uint32_t cnt     = 0;      
-
-   double size = double(promSize_);
-   double percentage;
-   double skim = 5.0;  
-
-   //check for valid file path
-   if ( !mcsReader.open(filePath_) ) {
-      mcsReader.close();
-      cout << "mcsReader.close() = file path error" << endl;
-      return(1);
+//! Block Read of PROM (independent of .MCS file)
+void CEEPromImpl::readProm (uint32_t address, uint32_t *data){
+   uint32_t i;
+   readCommand(address);
+   for(i=0;i<64;i++){
+      data[i] = data_[i];
    }
+}
 
-   if(promSize_ == 0x0){
-      cout << "Invalid promSize_: 0x0" << endl;
-      return false;      
-   }   
-   
-   //reset the flags
-   mem.endOfFile = false;   
+//! Erase Command
+void CMicronN25QEEProm::eraseCommand(uint32_t address) {    
+   // Set the address
+   setAddr(address); 
+   // Send the erase command      
+   if(addr32BitMode_){   
+      setCmd(WRITE_MASK|ERASE_CMD|0x4);     
+   }else{
+      setCmd(WRITE_MASK|ERASE_CMD|0x3);  
+   }           
+}
 
-   //read the entire mcs file
-   while(cnt < promSize_) {
-   
-      //read a line of the mcs file
-      if (mcsReader.read(&mem)<0){
-         cout << "mcsReader.close() = line read error" << endl;
-         mcsReader.close();
-         return false;
-      }
-      if ( mem.endOfFile ){
-         break;
-      }
-      
-      // Latch the .MCS file data
-      fileData = (uint8_t)(mem.data & 0xFF);
-      
-      // Check if we need to readout the firmware
-      if( byteCnt==0 ) {
-         // Get the new PROM data array
-         while((retAddr = bufferedReadCommand(mem.address,promData)) != mem.address){
-            if(retAddr==0x1){
-               return false;
-            }
-         }
-      }
-       
-      if(fileData != promData[byteCnt]) {
-         cout << "verifyBootProm error = ";
-         cout << "invalid read back" <<  endl;
-         cout << hex << "\taddress: 0x"  << mem.address << endl;
-         cout << hex << "\tfileData: 0x" << (uint32_t)fileData << endl;
-         cout << hex << "\tpromData: 0x" << (uint32_t)promData[byteCnt] << endl;
-         mcsReader.close();
-         return false;
-      }      
-      
-      cnt++;
-      byteCnt++;
-      if(byteCnt==256){
-         byteCnt = 0;                
-      }      
-      
-      percentage = (((double)(mem.address-promStartAddr_))/size)*100;
-      if( (percentage>=skim) && (percentage<100.0) ) {
-         skim += 5.0;
-         cout << "Verifying the PROM: " << dec << uint16_t(percentage) << " percent done" << endl;
-      }       
-   }
-   
-   mcsReader.close();  
-   cout << "Verification completed" << endl;
-   cout << "*******************************************************************" << endl;   
-   return true;
+
+//! Write Command
+void CMicronN25QEEProm::writeCommand(uint32_t address) {   
+   setData();
+   // Set the address
+   setAddr(address); 
+   // Send the write command      
+   if(addr32BitMode_){   
+      setCmd(WRITE_MASK|WRITE_4BYTE_CMD|0x104);     
+   }else{
+      setCmd(WRITE_MASK|WRITE_3BYTE_CMD|0x103);  
+   }    
 }
 
 //! Read Command
-void AxiMicronN25Q::readCommand(uint32_t address) {  
+void CMicronN25QEEProm::readCommand(uint32_t address) {  
    //Wait while the Flash is busy.
    waitForFlashReady();   
    
@@ -711,79 +629,17 @@ void AxiMicronN25Q::readCommand(uint32_t address) {
    }else{
       setCmd(READ_MASK|READ_3BYTE_CMD|0x103);  
    }          
-}
-
-//! Buffered Read Command
-uint32_t AxiMicronN25Q::bufferedReadCommand( uint32_t baseAddr, uint8_t *data ) {
-   uint32_t  i;  
-   Data     *dat;
-   uint32_t *buff;
-   
-   // Check if lane is defined
-   if(lane_==0xFF){
-      cout << "AxiMicronN25Q.bufferedReadCommand() = lane_ not defined " << endl;
-      return 0x1;// ERROR    
-   }
-
-   // Check if vc is defined
-   if(vc_==0xFF){
-      cout << "AxiMicronN25Q.bufferedReadCommand() = vc_ not defined " << endl;
-      return 0x1;// ERROR     
-   }
-   
-   // Set the address
-   setAddr(baseAddr);        
-      
-   // Flush the data queue
-   while( system_->commLink()->pollDataQueue() != NULL );
-
-   // Send the read command      
-   if(addr32BitMode_){   
-      setCmd(READ_MASK|VERIFY_MASK|READ_4BYTE_CMD|0x104);     
-   }else{
-      setCmd(READ_MASK|VERIFY_MASK|READ_3BYTE_CMD|0x103);  
-   }   
-   
-   while( ((dat = system_->commLink()->pollDataQueue(10000)) == NULL) ){
-      // Send the read command      
-      if(addr32BitMode_){   
-         setCmd(READ_MASK|VERIFY_MASK|READ_4BYTE_CMD|0x104);     
-      }else{
-         setCmd(READ_MASK|VERIFY_MASK|READ_3BYTE_CMD|0x103);  
-      }    
-   }
-
-   // Check the size
-   if( dat->size() != 257 ){
-      return 0x2;// ERROR      
-   }   
-   
-   // Get the data
-   buff = dat->data();
-
-   // Load the data
-   for(i=0;i<256;i++){
-      data[i] = (uint8_t)(buff[i+1]&0xFF);
-   }   
-   
-   return buff[0];
+   getData();
 }
 
 //! Reset the FLASH memory Command
-void AxiMicronN25Q::resetFlash ( ) {
-   REGISTER_LOCK
+void CMicronN25QEEProm::resetFlash ( ) {
+
    // Send the enable reset command
-   cmdReg_->set(WRITE_MASK|ENABLE_RESET_CMD); 
-   writeRegister(cmdReg_, true);   
+   setCmd(WRITE_MASK|ENABLE_RESET_CMD, false); 
    
    // Send the reset command
-   cmdReg_->set(WRITE_MASK|RESET_CMD); 
-   writeRegister(cmdReg_, true);   
-   
-   // Set the firmware register
-   addr32BitReg_->set((uint32_t)addr32BitMode_);
-   writeRegister(addr32BitReg_, true);   
-   REGISTER_UNLOCK
+   setCmd(WRITE_MASK|RESET_CMD, false); 
    
    // Check the address mode
    if(addr32BitMode_){
@@ -802,89 +658,122 @@ void AxiMicronN25Q::resetFlash ( ) {
 }
 
 //! Enable Write commands
-void AxiMicronN25Q::writeEnable ( ) {
+void CMicronN25QEEProm::writeEnable ( ) {
    //Wait while the Flash is busy.
    waitForFlashReady();   
    
    // Enable Writes
-   REGISTER_LOCK
-   cmdReg_->set(WRITE_MASK|WRITE_ENABLE_CMD);
-   writeRegister(cmdReg_, true); 
-   REGISTER_UNLOCK
+   setCmd(WRITE_MASK|WRITE_ENABLE_CMD, false);
 }
 
 //! Disable Write commands
-void AxiMicronN25Q::writeDisable ( ) {
+void CMicronN25QEEProm::writeDisable ( ) {
    //Wait while the Flash is busy.
    waitForFlashReady();   
    
    // Disable Writes
-   REGISTER_LOCK
-   cmdReg_->set(WRITE_MASK|WRITE_DISABLE_CMD); 
-   writeRegister(cmdReg_, true);   
-   REGISTER_UNLOCK   
+   setCmd(WRITE_MASK|WRITE_DISABLE_CMD, false); 
 }
 
 //! Wait for the FLASH memory to not be busy
-void AxiMicronN25Q::waitForFlashReady ( ) { 
+void CMicronN25QEEProm::waitForFlashReady ( ) { 
 	while((statusReg() & FLAG_STATUS_RDY) == 0);
 }
 
 //! Pull the status register
-uint32_t AxiMicronN25Q::statusReg ( ) {  
+uint32_t CMicronN25QEEProm::statusReg ( ) {  
    setCmd(READ_MASK|FLAG_STATUS_REG|0x1); 
-   REGISTER_LOCK
-   readRegister(cmdReg_);
-   REGISTER_UNLOCK
-   return cmdReg_->get();  
+   return getCmd();
 }
 
+// Micron N25Q driven by slac axi firmware
+class CAxiMicronN25QEEProm:  public CMicronN25QEEProm, public IEntryAdapt {
+protected:
+	ScalVal amodeReg_;
+	ScalVal addrReg_;
+	ScalVal cmdReg_;
+	ScalVal dataReg_;
+
+public:
+	CAxiMicronN25QEEProm(Key &k, Path p, shared_ptr<const CAxiMicronN25QImpl> ie)
+	: IEntryAdapt(k, p, ie),
+      amodeReg_( IScalVal::create( p->findByName("addr32BitMode") ) ),
+      addrReg_ ( IScalVal::create( p->findByName("ADDR") ) ),
+      cmdReg_  ( IScalVal::create( p->findByName("CMD") ) ),
+      dataReg_ ( IScalVal::create( p->findByName("DATA") ) )
+	{
+	}
+
+protected:
+	virtual void set32BitModeReg();
+      
+    //! Set the address register
+    virtual void setAddr (uint32_t value);
+
+
+    //! Set the command register
+	virtual void setCmd (uint32_t value, bool writeEnable = true);
+
+	virtual uint32_t getCmd();
+      
+    //! Send the data register
+	virtual void setData ();
+
+    //! Get the data register
+	virtual void getData ();
+};
+
+void CAxiMicronN25QEEProm::set32BitModeReg()
+{
+   amodeReg_->setVal(addr32BitMode_ ? 1 : 0);
+}
+
+
+uint32_t CAxiMicronN25QEEProm::getCmd()
+{
+uint32_t v;
+   cmdReg_->getVal( &v );
+   return v;
+}
+
+
 //! Set the address register
-void AxiMicronN25Q::setAddr (uint32_t value) {
-   REGISTER_LOCK
-   addrReg_->set(value);
-   writeRegister(addrReg_, true);
-   REGISTER_UNLOCK
+void CAxiMicronN25QEEProm::setAddr (uint32_t value)
+{
+   addrReg_->setVal(value);
 }
 
 //! Set the command register
-void AxiMicronN25Q::setCmd (uint32_t value) {
+void CAxiMicronN25QEEProm::setCmd (uint32_t value, bool doWriteEnable) {
    // Check for write command and not write disable command
-   if ( value&WRITE_MASK ){
+   if ( doWriteEnable && (value & WRITE_MASK) ){
       writeEnable(); 
    }
    // Send the command
-   REGISTER_LOCK
-   cmdReg_->set(value);
-   writeRegister(cmdReg_, true); 
-   REGISTER_UNLOCK
+   cmdReg_->setVal(value);
 }
 
 //! Set the data register
-void AxiMicronN25Q::setData () {
-   REGISTER_LOCK
-   dataReg_->setData(data_);
-   writeRegister(dataReg_, true); 
-   REGISTER_UNLOCK
+void CAxiMicronN25QEEProm::setData ()
+{
+   dataReg_->setVal(data_, sizeof(data_)/sizeof(data_[0]));
 }
 
 //! Get the data register
-void AxiMicronN25Q::getData () {
-   uint32_t i;
-   REGISTER_LOCK
-   readRegister(dataReg_);
-   for(i=0;i<64;i++){
-      data_[i] = dataReg_->data()[i];
-   }
-   REGISTER_UNLOCK   
+void CAxiMicronN25QEEProm::getData ()
+{
+   dataReg_->getVal(data_, sizeof(data_)/sizeof(data_[0]));
 }
 
-//! Block Read of PROM (independent of .MCS file)
-void AxiMicronN25Q::readBootProm (uint32_t address, uint32_t *data){
-   uint32_t i;
-   readCommand(address);
-   getData();
-   for(i=0;i<64;i++){
-      data[i] = data_[i];
-   }
-}   
+typedef shared_ptr<CAxiMicronN25QEEProm> AxiMicronN25QAdapt;
+
+EEProm IEEProm::create(Path p)
+{
+EEProm rval;
+
+  // check if the object referred to by 'p' actually supports
+  // the desired interface:
+  rval = IEntryAdapt::check_interface<AxiMicronN25QAdapt, AxiMicronN25QImpl>( p );
+
+  return rval;
+}
