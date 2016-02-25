@@ -58,6 +58,8 @@ public:
 #include <cpsw_api_user.h>
 #include <cpsw_api_builder.h>
 
+#include <PromFileReader.h>
+
 // public user interface
 
 class IEEProm;
@@ -65,11 +67,7 @@ typedef shared_ptr<IEEProm> EEProm;
 
 class IEEProm : public virtual IEntry {
    public:
-      virtual void setProgSize (uint32_t progSize)       = 0;
-      
-      
-      virtual void setFilePath (string pathToFile)       = 0;
-	  virtual bool fileExist ( )                         = 0;      
+      virtual void setFileReader(FileReader)             = 0;
       
       virtual void setAddr32BitMode (bool addr32BitMode) = 0;
       
@@ -103,16 +101,17 @@ class IEEProm : public virtual IEntry {
    
       virtual ~IEEProm ( ) {};
 
-      static uint32_t getFileSize (string pathToFile);
 
       static EEProm create(Path p);
+
+      class InvalidFileReader {};
 };
 
 // builder interface for axi micron N25Q eeprom
 class IAxiMicronN25Q;
 typedef shared_ptr<IAxiMicronN25Q> AxiMicronN25Q;
 
-class IAxiMicronN25Q : public virtual IEntry {
+class IAxiMicronN25Q : public virtual IField {
 public:
 
 	virtual ~IAxiMicronN25Q() {}
@@ -138,20 +137,5 @@ protected:
 };
 
 typedef shared_ptr<CAxiMicronN25QImpl> AxiMicronN25QImpl;
-
-AxiMicronN25Q IAxiMicronN25Q::create(const char *name)
-{
-AxiMicronN25QImpl v = CShObj::create<AxiMicronN25QImpl>(name);
-Field f;
-	f = IIntField::create("addr32BitMode", 32);
-	v->addAtAddress( f, 0x04 );
-	f = IIntField::create("ADDR",          32);
-	v->addAtAddress( f, 0x08 );
-	f = IIntField::create("CMD",           32);
-	v->addAtAddress( f, 0x0C );
-	f = IIntField::create("DATA",          32);
-	v->addAtAddress( f, 0x80, 64 );
-	return v;
-}
 
 #endif

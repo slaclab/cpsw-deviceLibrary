@@ -34,7 +34,6 @@
 
 #include "AxiMicronN25Q.h"
 #include <cpsw_entry_adapt.h>
-#include "McsRead.h"
 
 using namespace std;
 
@@ -87,52 +86,13 @@ using namespace std;
 #define WRITE_MASK  0x80000000 
 #define VERIFY_MASK 0x40000000 
 
-class IFileReader;
-class FileReader;
-
-class IFileReader {
-public:
-	virtual bool       open(string)       = 0;
-	virtual void       close()            = 0;
-	virtual uint32_t   startAddr()        = 0;
-	virtual uint32_t   addrSize()         = 0;
-	virtual uint32_t   read(McsReadData*) = 0;
-};
-
-// for exception safety
-class FileReader : public IFileReader {
-	IFileReader *h;
-public:
-	virtual bool       open(string path)      { return h->open(path);  }
-	virtual void       close()                { h->close();            }
-	virtual uint32_t   startAddr()            { return h->startAddr(); }
-	virtual uint32_t   addrSize()             { return h->addrSize();  }
-	virtual uint32_t   read(McsReadData *arg) { return h->read(arg);   }
-
-	virtual ~FileReader() 
-	{
-		h->close();
-	}
-	FileReader(IFileReader *i):h(i) {}
-};
-
-class McsReadAdapt : public McsRead, public IFileReader {
-public:
-	virtual bool       open(string path)      { return McsRead::open(path);  }
-	virtual void       close()                { McsRead::close();            }
-	virtual uint32_t   startAddr()            { return McsRead::startAddr(); }
-	virtual uint32_t   addrSize()             { return McsRead::addrSize();  }
-	virtual uint32_t   read(McsReadData *arg) { return McsRead::read(arg);   }
-};
-
 // Implementation of the EEPROM user interface
 class CEEPromImpl : public IEEProm {
 private:
 	// Local Variables -- for supporting the public interface
-	string       filePath_;
 	uint32_t     progSize_;
 	uint32_t     progStartAddr_;
-	IFileReader *reader_;
+	FileReader   reader_;
 
 protected:
 	bool     addr32BitMode_;
@@ -141,27 +101,11 @@ public:
 	CEEPromImpl()
 	: progSize_(0),
 	  progStartAddr_(0),
-	  addr32BitMode_(false),
-	  reader_( new McsReadAdapt() )
+	  addr32BitMode_(false)
 	{
 	}
 
-	CEEPromImpl(IFileReader *reader)
-	: progSize_(0),
-	  progStartAddr_(0),
-	  addr32BitMode_(false),
-	  reader_( reader )
-	{
-	}
-
-	virtual ~CEEPromImpl()
-	{
-		delete reader_;
-	}
-	virtual void     setProgSize (uint32_t promSize);
-	virtual uint32_t getFileSize (string pathToFile); 
-	virtual void setFilePath (string pathToFile);
-	virtual bool fileExist ( );      
+    virtual void setFileReader(FileReader reader);
 	virtual void setAddr32BitMode (bool addr32BitMode);
     virtual void eraseProm (uint32_t startAddr, uint32_t endAddr);
 
@@ -257,26 +201,15 @@ class CMicronN25QEEProm : public CEEPromImpl {
 	virtual void getData ()   = 0;
 };
 
-void CEEPromImpl::setProgSize (uint32_t progSize) {
-   progSize_ = progSize;
-}
-
-uint32_t CEEPromImpl::getFileSize (string pathToFile) {
-   FileReader mcsReader(reader_);
-   uint32_t retVar;
-   mcsReader.open(pathToFile);
-   printf("Calculating PROM file (.mcs) Memory Address size ...");    
-   retVar = mcsReader.addrSize();
-   printf("PROM Size = 0x%08x\n", retVar); 
-   return retVar; 
-}
-
-void CEEPromImpl::setFilePath (string pathToFile) {
-   filePath_ = pathToFile;
-   FileReader mcsReader(reader_);   
-   mcsReader.open(filePath_);
-   progStartAddr_ = mcsReader.startAddr();
-   resetFlash();     
+void CEEPromImpl::setFileReader(FileReader reader)
+{
+	reader_             = reader;
+	FileDescriptor desc = reader_->open();
+	progStartAddr_      = desc->getAddr();
+    printf("Calculating PROM file (.mcs) Memory Address size ...");    
+	progSize_           = desc->getSize();
+    printf("PROM Size = 0x%08x\n", progSize_); 
+	resetFlash();
 }
 
 //! Set the address mode
@@ -339,11 +272,6 @@ uint8_t CMicronN25QEEProm::getManufacturerCapacity(){
    return (uint8_t)(getCmd()&0xFF);      
 }    
 
-//! Check if file exist (true=exists)
-bool CEEPromImpl::fileExist ( ) {
-  ifstream ifile(filePath_.c_str());
-  return ifile;
-}
 
 //! Print Power Cycle Reminder
 void CEEPromImpl::rebootReminder ( bool pwrCycleReq ) {
@@ -411,8 +339,10 @@ void CEEPromImpl::eraseProm (uint32_t startAddr, uint32_t eraseSize) {
 bool CEEPromImpl::writeProm ( ) {
    cout << "*******************************************************************" << endl;
    cout << "Starting Writing ..." << endl; 
-   FileReader mcsReader(reader_);
-   McsReadData mem;
+
+   FileDescriptor fileDesc;
+
+   uint8_t data;
    
    uint32_t fileData;
    double size = double(progSize_);
@@ -424,38 +354,42 @@ bool CEEPromImpl::writeProm ( ) {
    uint32_t cnt     = 0;     
 
    //check for valid file path
-   if ( !mcsReader.open(filePath_) ) {
-      cout << "mcsReader.open() = file path error" << endl;
+   if ( ! reader_ ) {
+      cout << "No FileReader set" << endl;
       return false;
-   }  
+   }
+   try {
+      fileDesc = reader_->open();
+   } catch ( IFileReader::InvalidPathError ) {
+      cout << "reader->open() = file path error" << endl;
+      return false;
+   }
    
    if(progSize_ == 0x0){
       cout << "Invalid progSize_: 0x0" << endl;
       return false;      
    }
    
-   //reset the flags
-   mem.endOfFile = false;      
-   
    //read the entire mcs file
    while(cnt < progSize_) {
    
       //read a line of the mcs file
-      if (mcsReader.read(&mem)<0){
-         cout << "mcsReader.read() = line read error" << endl;
+	  try {
+		data = ++(*fileDesc);
+	  } catch ( IFileDescriptor::ReadError ) {
+         cout << "++(*fileDesc)(): = line read error" << endl;
          return false;
-      }
-      if ( mem.endOfFile ){
+      } catch ( IFileDescriptor::EndOfFile ) {
          break;
       }
       
       if( (byteCnt==0) && (wordCnt==0) ) {
-         baseAddr = mem.address;
+         baseAddr = fileDesc->getAddr();
       }
       if( byteCnt==0 ){
-         fileData = ((uint32_t)(mem.data&0xFF)) << (8*(3-byteCnt));
+         fileData = ((uint32_t)(data&0xFF)) << (8*(3-byteCnt));
       }else{
-         fileData |= ((uint32_t)(mem.data&0xFF)) << (8*(3-byteCnt));
+         fileData |= ((uint32_t)(data&0xFF)) << (8*(3-byteCnt));
       }
       
       cnt++;
@@ -470,7 +404,7 @@ bool CEEPromImpl::writeProm ( ) {
          }                 
       }
       
-      percentage = (((double)(mem.address-progStartAddr_))/size)*100;
+      percentage = (((double)(fileDesc->getAddr() - progStartAddr_))/size)*100;
       if( (percentage>=skim) && (percentage<100.0) ) {
          skim += 5.0;
          cout << "Writing the PROM: " << dec << round(percentage)-1 << " percent done" << endl;
@@ -507,8 +441,9 @@ bool CEEPromImpl::writeProm ( ) {
 bool CEEPromImpl::verifyProm ( ) {
    cout << "*******************************************************************" << endl;
    cout << "Starting Verification ..." << endl; 
-   FileReader  mcsReader(reader_);
-   McsReadData mem;
+   FileDescriptor fileDesc;
+
+   uint8_t data;
    
    uint8_t promData,fileData;
    double size = double(progSize_);
@@ -519,43 +454,47 @@ bool CEEPromImpl::verifyProm ( ) {
    uint32_t cnt     = 0;  
 
    //check for valid file path
-   if ( !mcsReader.open(filePath_) ) {
-      cout << "mcsReader.open() = file path error" << endl;
-      return(1);
+   if ( ! reader_ ) {
+      cout << "No FileReader set" << endl;
+      return false;
    }
-
+   try {
+      fileDesc = reader_->open();
+   } catch ( IFileReader::InvalidPathError ) {
+      cout << "reader->open() = file path error" << endl;
+      return false;
+   }
+ 
    if(progSize_ == 0x0){
       cout << "Invalid progSize_: 0x0" << endl;
       return false;      
    }   
    
-   //reset the flags
-   mem.endOfFile = false;   
-
    //read the entire mcs file
    while(cnt < progSize_) {
    
       //read a line of the mcs file
-      if (mcsReader.read(&mem)<0){
-         cout << "mcsReader.read() = line read error" << endl;
+      try {
+         data = ++(*fileDesc);
+      } catch ( IFileDescriptor::ReadError ) {
+         cout << "++(*fileDesc)(): = line read error" << endl;
          return false;
-      }
-      if ( mem.endOfFile ){
+      } catch ( IFileDescriptor::EndOfFile ) {
          break;
       }
       
-      fileData = (uint8_t)(mem.data & 0xFF);
+      fileData = (uint8_t)(data & 0xFF);
       if( (byteCnt==0) && (wordCnt==0) ){ 
-         readCommand(mem.address);
+         readCommand(fileDesc->getAddr());
       }
       promData = (uint8_t)( (data_[wordCnt] >> 8*(3-byteCnt)) & 0xFF);
       cnt++;
       if(fileData != promData) {
          cout << "verifyProm error = ";
          cout << "invalid read back" <<  endl;
-         cout << hex << "\taddress: 0x"  << mem.address << endl;
-         cout << hex << "\tfileData: 0x" << (uint32_t)fileData << endl;
-         cout << hex << "\tpromData: 0x" << (uint32_t)promData << endl;
+         cout << hex << "\taddress: 0x"  << fileDesc->getAddr() << endl;
+         cout << hex << "\tfileData: 0x" << (uint32_t)fileData  << endl;
+         cout << hex << "\tpromData: 0x" << (uint32_t)promData  << endl;
          return false;
       }      
       
@@ -568,7 +507,7 @@ bool CEEPromImpl::verifyProm ( ) {
          }                 
       }      
       
-      percentage = (((double)(mem.address-progStartAddr_))/size)*100;
+      percentage = (((double)(fileDesc->getAddr()-progStartAddr_))/size)*100;
       if( (percentage>=skim) && (percentage<100.0) ) {
          skim += 5.0;
          cout << "Verifying the PROM: " << dec << uint16_t(percentage) << " percent done" << endl;
@@ -783,3 +722,20 @@ EEProm rval;
 
   return rval;
 }
+
+AxiMicronN25Q IAxiMicronN25Q::create(const char *name)
+{
+AxiMicronN25QImpl v = CShObj::create<AxiMicronN25QImpl>(name);
+Field f;
+	f = IIntField::create("addr32BitMode", 32);
+	v->addAtAddress( f, 0x04 );
+	f = IIntField::create("ADDR",          32);
+	v->addAtAddress( f, 0x08 );
+	f = IIntField::create("CMD",           32);
+	v->addAtAddress( f, 0x0C );
+	f = IIntField::create("DATA",          32);
+	v->addAtAddress( f, 0x80, 64 );
+	return v;
+}
+
+
