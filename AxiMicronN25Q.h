@@ -53,59 +53,10 @@ public:
 #define __AXI_MICRON_N25Q_H__
 
 #include <stdint.h>
-#include <string.h>
 
 #include <cpsw_api_user.h>
 #include <cpsw_api_builder.h>
 
-#include <PromFileReader.h>
-
-// public user interface
-
-class IEEProm;
-typedef shared_ptr<IEEProm> EEProm;
-
-class IEEProm : public virtual IEntry {
-   public:
-      virtual void setFileReader(FileReader)             = 0;
-      
-      virtual void setAddr32BitMode (bool addr32BitMode) = 0;
-      
-      virtual void setPromStatusReg(uint8_t value)       = 0;  
-      
-      virtual uint8_t getPromStatusReg()                 = 0;    
-      
-      virtual uint8_t getManufacturerId()                = 0;      
-      
-      virtual uint8_t getManufacturerType()              = 0;        
-      
-      virtual uint8_t getManufacturerCapacity()          = 0;        
-
-	  virtual unsigned getEraseBlockSize()               = 0;
-      
-      //! Erase the PROM
-
-	  virtual void eraseProm ()                          = 0;
-
-      //! Write the .mcs file to the PROM
-      virtual bool writeProm ( )                         = 0; 
-      
-      //! Compare the .mcs file with the PROM
-      virtual bool verifyProm ( )                        = 0; 
-      
-      //! Print Reminder
-      virtual void rebootReminder ( bool pwrCycleReq )   = 0;
-   
-      //! Block Read of PROM (independent of .MCS file)
-      virtual void readProm (uint32_t address, uint32_t *data) = 0;      
-   
-      virtual ~IEEProm ( ) {};
-
-
-      static EEProm create(Path p);
-
-      class InvalidFileReader {};
-};
 
 // builder interface for axi micron N25Q eeprom
 class IAxiMicronN25Q;
@@ -118,24 +69,5 @@ public:
 
 	static AxiMicronN25Q create(const char *name);
 };
-
-#include <cpsw_mmio_dev.h>
-
-class CAxiMicronN25QImpl : public IAxiMicronN25Q, public CMMIODevImpl {
-public:
-	CAxiMicronN25QImpl(Key &k, const char *name)
-	: CMMIODevImpl(k, name, 0xC0 << 2, LE)
-	{
-	}
-protected:
-	CAxiMicronN25QImpl(CAxiMicronN25QImpl &orig, Key &k)
-	: CMMIODevImpl(orig, k)
-	{
-	}
-
-	virtual CAxiMicronN25QImpl *clone(Key &k) { return new CAxiMicronN25QImpl( *this, k ); }
-};
-
-typedef shared_ptr<CAxiMicronN25QImpl> AxiMicronN25QImpl;
 
 #endif
