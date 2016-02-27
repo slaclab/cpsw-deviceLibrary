@@ -164,13 +164,13 @@ AxiMicronN25Q IAxiMicronN25Q::create(const char *name)
 AxiMicronN25QImpl v = CShObj::create<AxiMicronN25QImpl>(name);
 Field f;
 	f = IIntField::create("addr32BitMode", 32);
-	v->addAtAddress( f, 0x04 );
+	v->addAtAddress( f,  0x04 );
 	f = IIntField::create("ADDR",          32);
-	v->addAtAddress( f, 0x08 );
+	v->addAtAddress( f,  0x08 );
 	f = IIntField::create("CMD",           32);
-	v->addAtAddress( f, 0x0C );
+	v->addAtAddress( f,  0x0C );
 	f = IIntField::create("DATA",          32);
-	v->addAtAddress( f, 0x80, 64 );
+	v->addAtAddress( f, 0x200, 64 );
 	return v;
 }
 
