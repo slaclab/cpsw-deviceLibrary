@@ -1,19 +1,13 @@
-OBJS=AxiMicronN25Q.o McsFileReader.o PromApiImpl.o MicronN25Q.o ../generic/McsRead.o
+CPSW_DIR=/home/till/lcls/lcls2/cpsw/api/sw
 
-libprom.a: $(OBJS)
-	ar cr $@ $^
-	ranlib $@
+include $(CPSW_DIR)/defs.mak
 
+promLib_SRCS+=AxiMicronN25Q.cpp
+promLib_SRCS+=MicronN25Q.cpp
+promLib_SRCS+=McsFileReader.cpp
+promLib_SRCS+=PromApiImpl.cpp
+promLib_SRCS+=McsRead.cpp
 
-%.o: %.cpp
-	g++ -I. -I../generic -I./cpsw -O2 -c -o $@ $<
+STATIC_LIBRARIES+=promLib
 
--include deps
-
-deps: $(OBJS:%.o=%.cpp)
-	$(CXX) $(CXXFLAGS) -I../generic -MM $^ > $@
-
-
-clean:
-	$(RM) *.o
-	$(RM) libprom.a
+include $(CPSW_DIR)/rules.mak
