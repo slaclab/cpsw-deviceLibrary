@@ -1,4 +1,7 @@
-CPSW_DIR=/home/till/lcls/lcls2/cpsw/api/sw
+CPSW_DIR=../cpsw
+
+# may override CPSW_DIR from 'release.mak'
+-include ./release.mak
 
 include $(CPSW_DIR)/defs.mak
 
