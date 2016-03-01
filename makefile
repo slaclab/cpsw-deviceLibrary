@@ -7,6 +7,12 @@ SRCDIR=.
 
 include $(CPSW_DIR)/defs.mak
 
+HEADERS += Adc16Dx370.h AmcCarrier.h AmcGenericAdcDacCtrl.h AmcGenericAdcDac.h
+HEADERS += AxiAd5780.h AxiCommon.h AxiLtc2270.h AxiMicronN25Q.h AxiMicronP30.h
+HEADERS += AxiVersion.h AxiXadc.h CentralNode.h Dac38J84.h JesdRxDaq.h JesdRx.h
+HEADERS += JesdTx.h Lmk04828.h MicronN25Q.h MitigationNode.h Pgp2bAxi.h PrbsTx.h
+HEADERS += PromApiImpl.h PromApiUser.h PromFileReader.h RingBuffer.h TenGigEthReg.h
+
 STATIC_LIBRARIES += deviceLib
 
 deviceLib_SRCS += Adc16Dx370.cc
