@@ -1,7 +1,9 @@
 CPSW_DIR=../cpsw
 
 # may override CPSW_DIR from 'release.mak'
--include ./release.mak
+# must set SRCDIR (is redefined by recursive make)
+SRCDIR=.
+-include $(SRCDIR)/release.mak
 
 include $(CPSW_DIR)/defs.mak
 
