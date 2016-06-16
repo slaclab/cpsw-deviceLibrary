@@ -322,10 +322,13 @@ EEProm CEEPromImpl::CreatorRegistrar::create(Path p)
 EEProm rval;
 CreatorRegistrar *r = getHead();
 	for ( r = getHead(); r; r = r->next_ ) {
-		if ( (rval = r->creator( p )) )
-			break;
+		try {
+			if ( (rval = r->creator( p )) )
+				return rval;
+		} catch ( InterfaceNotImplementedError ) {
+		}
 	}
-	return rval;
+	throw InterfaceNotImplementedError(p);
 }
 
 EEProm CEEPromImpl::create(Path p)
