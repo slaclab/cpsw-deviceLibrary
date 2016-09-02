@@ -328,7 +328,7 @@ CreatorRegistrar *r = getHead();
 		} catch ( InterfaceNotImplementedError ) {
 		}
 	}
-	throw InterfaceNotImplementedError(p);
+	throw InterfaceNotImplementedError(p->toString());
 }
 
 EEProm CEEPromImpl::create(Path p)

@@ -53,6 +53,23 @@ protected:
 	}
 
 	virtual CAxiMicronN25QImpl *clone(Key &k) { return new CAxiMicronN25QImpl( *this, k ); }
+
+public:
+
+	CAxiMicronN25QImpl(Key &k, YamlState &ypath)
+	: CMMIODevImpl( k, ypath )
+	{
+	}
+
+	virtual void dumpYamlPart(YAML::Node &node) const
+	{
+		CMMIODevImpl::dumpYamlPart( node );
+	}
+
+	static const char *_getClassName() { return "AxiMicronN25Q"; }
+
+	virtual const char *getClassName() const { return _getClassName(); }
+
 };
 
 
@@ -70,10 +87,10 @@ protected:
 public:
 	CAxiMicronN25QEEProm(Key &k, Path p, shared_ptr<const CAxiMicronN25QImpl> ie)
 	: IEntryAdapt(k, p, ie),
-      amodeReg_( IScalVal::create( p->findByName("addr32BitMode") ) ),
-      addrReg_ ( IScalVal::create( p->findByName("ADDR") ) ),
-      cmdReg_  ( IScalVal::create( p->findByName("CMD") ) ),
-      dataReg_ ( IScalVal::create( p->findByName("DATA") ) )
+      amodeReg_( IScalVal::create( p->findByName("Addr32BitMode") ) ),
+      addrReg_ ( IScalVal::create( p->findByName("Addr") ) ),
+      cmdReg_  ( IScalVal::create( p->findByName("Cmd") ) ),
+      dataReg_ ( IScalVal::create( p->findByName("Data") ) )
 	{
 	}
 
@@ -163,13 +180,13 @@ AxiMicronN25Q IAxiMicronN25Q::create(const char *name)
 {
 AxiMicronN25QImpl v = CShObj::create<AxiMicronN25QImpl>(name);
 Field f;
-	f = IIntField::create("addr32BitMode", 32);
+	f = IIntField::create("Addr32BitMode", 32);
 	v->addAtAddress( f,  0x04 );
-	f = IIntField::create("ADDR",          32);
+	f = IIntField::create("Addr",          32);
 	v->addAtAddress( f,  0x08 );
-	f = IIntField::create("CMD",           32);
+	f = IIntField::create("Cmd",           32);
 	v->addAtAddress( f,  0x0C );
-	f = IIntField::create("DATA",          32);
+	f = IIntField::create("Data",          32);
 	v->addAtAddress( f, 0x200, 64 );
 	return v;
 }
