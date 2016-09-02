@@ -1,4 +1,4 @@
-CPSW_DIR=../cpsw
+CPSW_DIR=../Framework
 
 # may override CPSW_DIR from 'release.mak'
 # must set SRCDIR (is redefined by recursive make)
