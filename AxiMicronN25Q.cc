@@ -193,3 +193,5 @@ Field f;
 
 // Instantiation of this object registers this implementation
 CAxiMicronN25QEEProm::CreatorRegistrar CAxiMicronN25QEEProm::axiMicronN25QEEPromDriver;
+
+DECLARE_YAML_FIELD_FACTORY(AxiMicronN25QImpl);
