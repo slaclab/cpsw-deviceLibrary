@@ -13,7 +13,8 @@ HEADERS += AxiVersion.h AxiXadc.h CentralNode.h Dac38J84.h JesdRxDaq.h JesdRx.h
 HEADERS += JesdTx.h Lmk04828.h MicronN25Q.h MitigationNode.h Pgp2bAxi.h PrbsTx.h
 HEADERS += PromApiImpl.h PromApiUser.h PromFileReader.h RingBuffer.h TenGigEthReg.h
 
-STATIC_LIBRARIES += deviceLib
+STATIC_LIBRARIES_YES += deviceLib
+SHARED_LIBRARIES_YES += deviceLib
 
 deviceLib_SRCS += Adc16Dx370.cc
 deviceLib_SRCS += AmcCarrier.cc
