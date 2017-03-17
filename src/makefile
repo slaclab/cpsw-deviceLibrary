@@ -1,4 +1,7 @@
-CPSW_DIR=../Framework
+PACKAGE_TOP=/afs/slac/g/lcls/package/
+CPSW_FRAMEWORK_VERSION=R3.5.3
+
+CPSW_DIR=$(PACKAGE_TOP)/cpsw/framework/$(CPSW_FRAMEWORK_VERSION)/src
 
 # may override CPSW_DIR from 'release.mak'
 # must set SRCDIR (is redefined by recursive make)
