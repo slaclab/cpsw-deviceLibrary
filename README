@@ -1,0 +1,17 @@
+## Copyright Notice
+This file is part of CPSW. It is subject to the license terms in the LICENSE.txt
+file found in the top-level directory of this distribution and
+[at](https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html).
+
+No part of CPSW, including this file, may be copied, modified, propagated, or
+distributed except according to the terms contained in the LICENSE.txt file.
+
+## Installation Instructions 
+
+Run make and be happy!
+If you need to change configurations they can be done by using a release.mak file 
+inside src folder.
+
+Please check CPSW Framework INSTALL document for details about configurations and
+other instructions.
+

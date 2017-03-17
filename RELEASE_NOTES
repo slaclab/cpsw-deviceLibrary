@@ -1,0 +1,5 @@
+R1.0.0      17-Mar-2017     H. Slepicka (slepicka)
+    Changes on the package structure
+        Move source code to src folder
+    Add top-level Makefile
+    Using CPSW Framework version R3.5.3
