@@ -6,8 +6,8 @@ CPSW_DIR=$(PACKAGE_TOP)/cpsw/framework/$(CPSW_FRAMEWORK_VERSION)/src
 # may override CPSW_DIR from 'release.mak'
 # must set SRCDIR (is redefined by recursive make)
 SRCDIR=.
--include $(SRCDIR)/release.mak
 
+-include $(SRCDIR)/release.mak
 include $(CPSW_DIR)/defs.mak
 
 HEADERS += Adc16Dx370.h AmcCarrier.h AmcGenericAdcDacCtrl.h AmcGenericAdcDac.h
