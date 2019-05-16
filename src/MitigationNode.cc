@@ -61,7 +61,7 @@ class CMitigationNodeAdapt : public IMitigationNode, public IEntryAdapt {
 protected:
 /* put ScalVals, etc. here */
 public:
-    CMitigationNodeAdapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie);
+    CMitigationNodeAdapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie);
 
 public:
 /* Functions that we will implement */
@@ -70,7 +70,7 @@ public:
 
 };
 
-CMitigationNodeAdapt::CMitigationNodeAdapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
+CMitigationNodeAdapt::CMitigationNodeAdapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
 {
 
 }

@@ -359,7 +359,7 @@ class CPgp2bAxiAdapt : public IPgp2bAxi, public IEntryAdapt {
 protected:
 /* put ScalVals, etc. here */
 public:
-    CPgp2bAxiAdapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie);
+    CPgp2bAxiAdapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie);
 
 public:
 /* Functions that we will implement */
@@ -369,7 +369,7 @@ public:
 
 };
 
-CPgp2bAxiAdapt::CPgp2bAxiAdapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
+CPgp2bAxiAdapt::CPgp2bAxiAdapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
 {
 
 }

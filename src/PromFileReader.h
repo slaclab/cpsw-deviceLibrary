@@ -2,8 +2,9 @@
 #define PROM_FILE_READER_H
 
 #include <stdint.h>
-#include <boost/shared_ptr.hpp>
-using boost::shared_ptr;
+
+// For definition of shared_ptr 
+#include <cpsw_api_user.h>
 
 // PROM File reader interface
 class IFileDescriptor;

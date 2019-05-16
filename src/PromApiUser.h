@@ -72,7 +72,7 @@ class IEEProm : public virtual IEntry {
       virtual ~IEEProm ( ) {};
 
 
-      static EEProm create(Path p);
+      static EEProm create(ConstPath p);
 
       class InvalidFileReader {};
 };

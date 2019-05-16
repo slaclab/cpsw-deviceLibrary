@@ -317,7 +317,7 @@ static CreatorRegistrar *theHead = 0;
 	return theHead;
 }
 
-EEProm CEEPromImpl::CreatorRegistrar::create(Path p)
+EEProm CEEPromImpl::CreatorRegistrar::create(ConstPath p)
 {
 EEProm rval;
 CreatorRegistrar *r = getHead();
@@ -331,12 +331,12 @@ CreatorRegistrar *r = getHead();
 	throw InterfaceNotImplementedError(p->toString());
 }
 
-EEProm CEEPromImpl::create(Path p)
+EEProm CEEPromImpl::create(ConstPath p)
 {
 	return CEEPromImpl::CreatorRegistrar::create( p );
 }
 
-EEProm IEEProm::create(Path p)
+EEProm IEEProm::create(ConstPath p)
 {
 	return CEEPromImpl::create( p );
 }

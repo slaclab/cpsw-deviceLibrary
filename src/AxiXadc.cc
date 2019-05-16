@@ -404,14 +404,14 @@ class CAxiXadcAdapt : public IAxiXadc, public IEntryAdapt {
 protected:
 /* put ScalVals, etc. here */
 public:
-    CAxiXadcAdapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie);
+    CAxiXadcAdapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie);
 
 public:
 /* Functions that we will implement */
 
 };
 
-CAxiXadcAdapt::CAxiXadcAdapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
+CAxiXadcAdapt::CAxiXadcAdapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
 {
 
 }

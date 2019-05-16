@@ -243,14 +243,14 @@ class CAmcGenericAdcDacCtrlAdapt : public IAmcGenericAdcDacCtrl, public IEntryAd
 protected:
 /* put ScalVals, etc. here */
 public:
-    CAmcGenericAdcDacCtrlAdapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie);
+    CAmcGenericAdcDacCtrlAdapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie);
 
 public:
 /* Functions that we will implement */
 
 };
 
-CAmcGenericAdcDacCtrlAdapt::CAmcGenericAdcDacCtrlAdapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
+CAmcGenericAdcDacCtrlAdapt::CAmcGenericAdcDacCtrlAdapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
 {
 
 }

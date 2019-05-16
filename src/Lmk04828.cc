@@ -859,7 +859,7 @@ class CLmk04828Adapt : public ILmk04828, public IEntryAdapt {
 protected:
 /* put ScalVals, etc. here */
 public:
-    CLmk04828Adapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie);
+    CLmk04828Adapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie);
 
 public:
 /* Functions that we will implement */
@@ -869,7 +869,7 @@ public:
 
 };
 
-CLmk04828Adapt::CLmk04828Adapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
+CLmk04828Adapt::CLmk04828Adapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
 {
 
 }

@@ -684,7 +684,7 @@ class CJesdRxAdapt : public IJesdRx, public IEntryAdapt {
 protected:
 /* put ScalVals, etc. here */
 public:
-    CJesdRxAdapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie);
+    CJesdRxAdapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie);
 
 public:
 /* Functions that we will implement */
@@ -694,7 +694,7 @@ public:
 
 };
 
-CJesdRxAdapt::CJesdRxAdapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
+CJesdRxAdapt::CJesdRxAdapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
 {
 
 }

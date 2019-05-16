@@ -411,7 +411,7 @@ class CDac38J84Adapt : public IDac38J84, public IEntryAdapt {
 protected:
 /* put ScalVals, etc. here */
 public:
-    CDac38J84Adapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie);
+    CDac38J84Adapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie);
 
 public:
 /* Functions that we will implement */
@@ -421,7 +421,7 @@ public:
 
 };
 
-CDac38J84Adapt::CDac38J84Adapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
+CDac38J84Adapt::CDac38J84Adapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
 {
 
 }

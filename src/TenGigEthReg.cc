@@ -306,14 +306,14 @@ class CTenGigEthRegAdapt : public ITenGigEthReg, public IEntryAdapt {
 protected:
 /* put ScalVals, etc. here */
 public:
-    CTenGigEthRegAdapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie);
+    CTenGigEthRegAdapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie);
 
 public:
 /* Functions that we will implement */
 
 };
 
-CTenGigEthRegAdapt::CTenGigEthRegAdapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
+CTenGigEthRegAdapt::CTenGigEthRegAdapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
 {
 
 }

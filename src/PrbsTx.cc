@@ -117,7 +117,7 @@ class CPrbsTxAdapt : public IPrbsTx, public IEntryAdapt {
 protected:
 /* put ScalVals, etc. here */
 public:
-    CPrbsTxAdapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie);
+    CPrbsTxAdapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie);
 
 public:
 /* Functions that we will implement */
@@ -126,7 +126,7 @@ public:
 
 };
 
-CPrbsTxAdapt::CPrbsTxAdapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
+CPrbsTxAdapt::CPrbsTxAdapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
 {
 
 }

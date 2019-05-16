@@ -187,7 +187,7 @@ class CJesdRxDaqAdapt : public IJesdRxDaq, public IEntryAdapt {
 protected:
 /* put ScalVals, etc. here */
 public:
-    CJesdRxDaqAdapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie);
+    CJesdRxDaqAdapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie);
 
 public:
 /* Functions that we will implement */
@@ -196,7 +196,7 @@ public:
 
 };
 
-CJesdRxDaqAdapt::CJesdRxDaqAdapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
+CJesdRxDaqAdapt::CJesdRxDaqAdapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
 {
 
 }

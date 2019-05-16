@@ -110,7 +110,7 @@ class CCentralNodeAdapt : public ICentralNode, public IEntryAdapt {
 protected:
 /* put ScalVals, etc. here */
 public:
-    CCentralNodeAdapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie);
+    CCentralNodeAdapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie);
 
 public:
 /* Functions that we will implement */
@@ -119,7 +119,7 @@ public:
 
 };
 
-CCentralNodeAdapt::CCentralNodeAdapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
+CCentralNodeAdapt::CCentralNodeAdapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
 {
 
 }

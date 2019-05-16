@@ -110,7 +110,7 @@ class CAxiAd5780Adapt : public IAxiAd5780, public IEntryAdapt {
 protected:
 /* put ScalVals, etc. here */
 public:
-    CAxiAd5780Adapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie);
+    CAxiAd5780Adapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie);
 
 public:
 /* Functions that we will implement */
@@ -119,7 +119,7 @@ public:
 
 };
 
-CAxiAd5780Adapt::CAxiAd5780Adapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
+CAxiAd5780Adapt::CAxiAd5780Adapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
 {
 
 }

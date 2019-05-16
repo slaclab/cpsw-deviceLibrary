@@ -85,7 +85,7 @@ protected:
 	ScalVal dataReg_;
 
 public:
-	CAxiMicronN25QEEProm(Key &k, Path p, shared_ptr<const CAxiMicronN25QImpl> ie)
+	CAxiMicronN25QEEProm(Key &k, ConstPath p, shared_ptr<const CAxiMicronN25QImpl> ie)
 	: IEntryAdapt(k, p, ie),
       amodeReg_( IScalVal::create( p->findByName("Addr32BitMode") ) ),
       addrReg_ ( IScalVal::create( p->findByName("Addr") ) ),
@@ -114,7 +114,7 @@ protected:
 
 	class CreatorRegistrar : protected CEEPromImpl::CreatorRegistrar {
 	public:
-		virtual EEProm creator(Path);
+		virtual EEProm creator(ConstPath);
 	};
 
 	// This object registers our implementation with the interface
@@ -166,7 +166,7 @@ void CAxiMicronN25QEEProm::getData ()
    dataReg_->getVal(data_, sizeof(data_)/sizeof(data_[0]));
 }
 
-EEProm CAxiMicronN25QEEProm::CreatorRegistrar::creator(Path p)
+EEProm CAxiMicronN25QEEProm::CreatorRegistrar::creator(ConstPath p)
 {
   // check if the object referred to by 'p' actually supports
   // the desired interface:

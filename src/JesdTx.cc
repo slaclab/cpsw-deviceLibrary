@@ -257,14 +257,14 @@ class CJesdTxAdapt : public IJesdTx, public IEntryAdapt {
 protected:
 /* put ScalVals, etc. here */
 public:
-    CJesdTxAdapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie);
+    CJesdTxAdapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie);
 
 public:
 /* Functions that we will implement */
 
 };
 
-CJesdTxAdapt::CJesdTxAdapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
+CJesdTxAdapt::CJesdTxAdapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
 {
 
 }

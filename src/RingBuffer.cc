@@ -89,14 +89,14 @@ class CRingBufferAdapt : public IRingBuffer, public IEntryAdapt {
 protected:
 /* put ScalVals, etc. here */
 public:
-    CRingBufferAdapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie);
+    CRingBufferAdapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie);
 
 public:
 /* Functions that we will implement */
 
 };
 
-CRingBufferAdapt::CRingBufferAdapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
+CRingBufferAdapt::CRingBufferAdapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
 {
 
 }

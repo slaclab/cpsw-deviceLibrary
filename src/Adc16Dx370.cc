@@ -306,7 +306,7 @@ class CAdc16Dx370Adapt : public IAdc16Dx370, public IEntryAdapt {
 protected:
 /* put ScalVals, etc. here */
 public:
-    CAdc16Dx370Adapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie);
+    CAdc16Dx370Adapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie);
 
 public:
 /* Functions that we will implement */
@@ -315,7 +315,7 @@ public:
 
 };
 
-CAdc16Dx370Adapt::CAdc16Dx370Adapt(Key &k, Path p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
+CAdc16Dx370Adapt::CAdc16Dx370Adapt(Key &k, ConstPath p, shared_ptr<const CEntryImpl> ie) : IEntryAdapt(k, p, ie)
 {
 
 }

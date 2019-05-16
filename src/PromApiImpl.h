@@ -64,17 +64,17 @@ protected:
 		private:
 			CreatorRegistrar *next_;
 		public:
-			virtual EEProm creator(Path) = 0;
+			virtual EEProm creator(ConstPath) = 0;
 		protected:
 			CreatorRegistrar();
 		private:
 			static CreatorRegistrar *&getHead();
 		public:
-			static EEProm create(Path);
+			static EEProm create(ConstPath);
 	};
 
 public:
-	static EEProm create( Path );
+	static EEProm create(ConstPath);
 };
 
 #endif
