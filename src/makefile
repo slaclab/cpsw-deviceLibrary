@@ -1,13 +1,9 @@
-PACKAGE_TOP=/afs/slac/g/lcls/package/
-CPSW_FRAMEWORK_VERSION=R3.6.6
-
-CPSW_DIR=$(PACKAGE_TOP)/cpsw/framework/$(CPSW_FRAMEWORK_VERSION)/src
-
 # may override CPSW_DIR from 'release.mak'
 # must set SRCDIR (is redefined by recursive make)
 SRCDIR=.
 
--include $(SRCDIR)/release.mak
+include $(TOPDIR)/release.mak
+-include $(TOPDIR)/release.local.mak
 include $(CPSW_DIR)/defs.mak
 
 HEADERS += Adc16Dx370.h AmcCarrier.h AmcGenericAdcDacCtrl.h AmcGenericAdcDac.h
