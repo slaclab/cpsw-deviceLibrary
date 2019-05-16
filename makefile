@@ -6,12 +6,20 @@ ifndef TOPDIR
 TOPDIR=.
 endif
 
+ifndef INSTALL_DIR
+INSTALL_DIR=.
+endif
+
 TOPTARGETS := all clean install uninstall
 SUBDIRS := src 
+
+define UPD
+$(foreach var,$(1),$(var)=$(addprefix $(if $($(var):/%=),../,),$($(var))))
+endef
 
 $(TOPTARGETS): $(SUBDIRS)
 
 $(SUBDIRS):
-	$(MAKE) -C $@ $(MAKECMDGOALS) TOPDIR=$(addprefix $(if $(TOPDIR:/%=),../,),$(TOPDIR))
+	$(MAKE) -C $@ $(MAKECMDGOALS) $(call UPD,TOPDIR INSTALL_DIR)
 
 .PHONY: $(TOPTARGETS) $(SUBDIRS) 
