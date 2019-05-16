@@ -12,6 +12,6 @@ SUBDIRS := src
 $(TOPTARGETS): $(SUBDIRS)
 
 $(SUBDIRS):
-	$(MAKE) -C $@ TOPDIR=../$(TOPDIR) $(MAKECMDGOALS)
+	$(MAKE) -C $@ $(MAKECMDGOALS) TOPDIR=$(addprefix $(if $(TOPDIR:/%=),../,),$(TOPDIR))
 
 .PHONY: $(TOPTARGETS) $(SUBDIRS) 
