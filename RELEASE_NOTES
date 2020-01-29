@@ -1,3 +1,6 @@
+R1.2.0      28-Jan-2020     J. Vasquez (jvasquez)
+    * Update CPSW framework to R4.4.1.
+    
 R1.1.2      28-Oct-2019     Kukhee Kim (khkim)
     * build with cpsw/framework R4.3.1
 
