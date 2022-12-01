@@ -24,7 +24,7 @@
 #include "AxiMicronN25Q.h"
 #include <cpsw_entry_adapt.h>
 
-using namespace std;
+// using namespace std;
 
 #define CMD_OFFSET 16
 
