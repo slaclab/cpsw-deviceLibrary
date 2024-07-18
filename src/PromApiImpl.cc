@@ -27,7 +27,10 @@
 
 #include "PromApiImpl.h"
 
-using namespace std;
+using std::hex;
+using std::dec;
+using std::cout;
+using std::endl;
 
 void CEEPromImpl::setFileReader(FileReader reader)
 {
