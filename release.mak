@@ -8,7 +8,7 @@ ifeq ($(PACKAGE_TOP),)
 ifneq ($(EPICS_PACKAGE_TOP),)
 	PACKAGE_TOP     = $(EPICS_PACKAGE_TOP)
 else
-	$(error PACKAGE_TOP or EPICS_PACKAGE_TOP must be set in the environment or on the command line)
+$(error PACKAGE_TOP or EPICS_PACKAGE_TOP must be set in the environment or on the command line)
 endif
 endif
 
