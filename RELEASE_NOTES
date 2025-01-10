@@ -1,3 +1,7 @@
+R1.2.2      10-Jan-2025     J. Lorelli (lorelli)
+    * Updated CPSW to R4.5.2
+    * Fixed build errors with new versions of GCC
+
 R1.2.1      30-Oct-2024     J. Lorelli (lorelli)
     * Make PACKAGE_TOP handling more flexible
     * Fix build on newer GCC
